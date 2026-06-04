@@ -39,21 +39,25 @@ INDEX_SYMBOLS: Final[dict] = {
     "dow":     "^DJI",
     "nikkei":  "^N225",
     "vix":     "^VIX",
+    "skew":    "^SKEW",   # CBOE SKEW (테일리스크)
     "dxy":     "DX-Y.NYB",
     "wti":     "CL=F",
+    "gold":    "GC=F",
     "tnx":     "^TNX",    # 미국 10년물
     "tyx":     "^TYX",    # 미국 30년물
-    "ust2y":   "^IRX",    # 미국 2년물 (13주)
+    "ust2y":   "^IRX",    # 미국 2년물 (13주 T-Bill)
 }
 
 # ── 시장 온도 계산 가중치 ──────────────────────────────────────
 TEMPERATURE_WEIGHTS: Final[dict] = {
-    "fear_greed":      0.20,
-    "vix_score":       0.20,
-    "sp_momentum":     0.20,
-    "hy_spread":       0.15,
-    "rate_spread":     0.15,
+    "fear_greed":      0.17,
+    "vix_score":       0.17,
+    "sp_momentum":     0.17,
+    "hy_spread":       0.13,
+    "rate_spread":     0.13,
     "kospi_momentum":  0.10,
+    "dxy_score":       0.07,   # DXY 역산: 강달러=부정, 약달러=긍정
+    "skew_score":      0.06,   # SKEW: 130 이하=정상, 150+=테일리스크
 }
 
 # ── IQ 스코어 8축 이름 ─────────────────────────────────────────

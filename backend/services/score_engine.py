@@ -43,19 +43,40 @@ def score_growth_momentum(info: dict, tech: dict) -> float:
 
 
 def score_valuation(info: dict) -> float:
-    """Valuation: Forward P/E and PEG. Lower is better."""
-    fpe = info.get("forwardPE", None)
-    peg = info.get("pegRatio", None)
+    """밸류에이션: P/E Forward·Trailing, PEG, EV/Revenue, P/Book 종합."""
+    fpe      = info.get("forwardPE",          None)
+    tpe      = info.get("trailingPE",         None)
+    peg      = info.get("pegRatio",           None)
+    ev_rev   = info.get("enterpriseToRevenue",None)
+    pb       = info.get("priceToBook",        None)
 
-    s = 5.0  # baseline
+    scores = []
+
+    # Forward P/E
     if fpe and fpe > 0:
-        pe_s = _clamp(10 - (fpe - 10) * 0.25, 1, 9)
-        s = pe_s
-    if peg and peg > 0:
-        peg_s = _clamp(10 - peg * 2.5, 1, 10)
-        s = (s + peg_s) / 2
+        scores.append(_clamp(10 - (fpe - 10) * 0.25, 1, 9))
 
-    return round(s, 1)
+    # Trailing P/E (보조 — 낮은 가중치)
+    if tpe and tpe > 0:
+        scores.append(_clamp(10 - (tpe - 12) * 0.20, 1, 9) * 0.6)
+
+    # PEG
+    if peg and peg > 0:
+        scores.append(_clamp(10 - peg * 2.5, 1, 10))
+
+    # EV/Revenue (낮을수록 좋음 — 5x 이하 매력적)
+    if ev_rev and ev_rev > 0:
+        scores.append(_clamp(10 - ev_rev * 0.8, 1, 9))
+
+    # P/Book (낮을수록 좋음 — 1x 이하 극저평가)
+    if pb and pb > 0:
+        pb_s = _clamp(10 - (pb - 1) * 0.5, 1, 9)
+        scores.append(pb_s)
+
+    if not scores:
+        return 5.0
+
+    return round(_clamp(sum(scores) / len(scores)), 1)
 
 
 def score_market_timing(tech: dict) -> float:
@@ -127,6 +148,32 @@ def score_risk_management(info: dict, tech: dict, supply: dict) -> float:
     supply_s = 7.0 if foreign_dir > 0 else 4.0
 
     return round(_clamp(beta_s * 0.6 + supply_s * 0.4), 1)
+
+
+def calc_dcf_upside(info: dict) -> Optional[float]:
+    """
+    간이 DCF 내재가치 계산 — FCF 기반 Gordon Growth Model 근사.
+    Returns: 현재가 대비 업사이드(%), None if 데이터 부족.
+    내재가치 = FCF * (1+g) / (r-g)  단, r=할인율(10%), g=성장률(min(EPS성장, 25%))
+    """
+    fcf       = info.get("freeCashflow") or 0
+    mktcap    = info.get("marketCap") or 0
+    eps_g_raw = info.get("earningsQuarterlyGrowth") or 0
+    price     = info.get("currentPrice") or info.get("regularMarketPrice") or 0
+    shares    = info.get("sharesOutstanding") or 0
+
+    if not all([fcf > 0, mktcap > 0, shares > 0]):
+        return None
+
+    g = min(eps_g_raw, 0.25) if eps_g_raw > 0 else 0.03   # 성장률 상한 25%
+    r = 0.10                                                  # 할인율 10%
+
+    if r <= g:
+        return None
+
+    intrinsic_mktcap = fcf * (1 + g) / (r - g)
+    upside = (intrinsic_mktcap / mktcap - 1) * 100
+    return round(upside, 1)
 
 
 def score_after_tax_return(info: dict, is_domestic: bool, target_return: float = 0.3) -> float:
@@ -211,6 +258,22 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
     kp_mom = macro.get("kospi_momentum", 0)
     kp_s = 65 + kp_mom * 2
 
+    # DXY 역산: 강달러(높을수록) = 신흥국 부정 → 낮은 점수
+    dxy = macro.get("dxy", 104)
+    if dxy < 98:    dxy_s = 80
+    elif dxy < 102: dxy_s = 68
+    elif dxy < 106: dxy_s = 55
+    elif dxy < 110: dxy_s = 42
+    else:           dxy_s = 28
+
+    # SKEW 역산: 낮을수록(130↓) = 테일리스크 낮음 = 긍정
+    skew = macro.get("skew", 130)
+    if skew < 120:   skew_s = 80
+    elif skew < 130: skew_s = 70
+    elif skew < 140: skew_s = 58
+    elif skew < 150: skew_s = 44
+    else:            skew_s = 28
+
     scores = {
         "fear_greed":      fg,
         "vix_score":       vix_s,
@@ -218,6 +281,8 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
         "hy_spread":       hy_s,
         "rate_spread":     rate_s,
         "kospi_momentum":  max(20, min(90, kp_s)),
+        "dxy_score":       dxy_s,
+        "skew_score":      skew_s,
     }
 
     temp = sum(scores[k] * TEMPERATURE_WEIGHTS[k] for k in TEMPERATURE_WEIGHTS)

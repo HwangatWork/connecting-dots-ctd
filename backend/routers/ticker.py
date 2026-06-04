@@ -22,6 +22,8 @@ async def get_ticker():
     yf_symbols = {
         "S&P 500": INDEX_SYMBOLS["sp500"],
         "NASDAQ":  INDEX_SYMBOLS["nasdaq"],
+        "DOW":     INDEX_SYMBOLS["dow"],
+        "닛케이":  INDEX_SYMBOLS["nikkei"],
         "VIX":     INDEX_SYMBOLS["vix"],
         "WTI":     INDEX_SYMBOLS["wti"],
         "금":      "GC=F",

@@ -8,6 +8,7 @@ import logging
 from providers import yahoo_finance as yf_p
 from providers import krx as krx_p
 from providers import fear_greed as fg_p
+from providers import fred as fred_p
 from services import technical as ta
 from services.score_engine import calculate_market_temperature, temperature_to_verdict
 from config import INDEX_SYMBOLS
@@ -27,6 +28,8 @@ async def build_market_response() -> MarketResponse:
 
     # 1. 데이터 수집
     fg_data = await fg_p.get_fear_greed()
+    fed_assets = await fred_p.get_fed_total_assets()   # 연준 총자산
+    fred_spread = await fred_p.get_rate_spread_10y2y() # 장단기 금리차 (FRED)
     krx_indices = krx_p.get_market_indices()
     supply_raw = krx_p.get_supply_data(days=20)
 
@@ -40,9 +43,12 @@ async def build_market_response() -> MarketResponse:
     vix_info = yf_p.get_current_prices([INDEX_SYMBOLS["vix"]])
     vix_val = (_safe_get(vix_info, INDEX_SYMBOLS["vix"], 20)).get("price", 20) or 20
 
-    kospi_data = krx_indices.get("kospi") or {}
-    kospi_val = kospi_data.get("value", 2800) or 2800
-    kospi_chg = kospi_data.get("change_pct", 0) or 0
+    kospi_data  = krx_indices.get("kospi")  or {}
+    kospi_val   = kospi_data.get("value", 2800) or 2800
+    kospi_chg   = kospi_data.get("change_pct", 0) or 0
+    kosdaq_data = krx_indices.get("kosdaq") or {}
+    kosdaq_val  = kosdaq_data.get("value", 800) or 800
+    kosdaq_chg  = kosdaq_data.get("change_pct", 0) or 0
 
     tnx_info = yf_p.get_current_prices([INDEX_SYMBOLS["tnx"]])
     tnx_val = (_safe_get(tnx_info, INDEX_SYMBOLS["tnx"], 4.45)).get("price", 4.45) or 4.45
@@ -53,14 +59,40 @@ async def build_market_response() -> MarketResponse:
     fx_prices = yf_p.get_current_prices(["KRW=X"])
     fx_val = (_safe_get(fx_prices, "KRW=X", 1380)).get("price", 1380) or 1380
 
+    # SKEW 지수 (테일리스크 — 130 이하 정상, 150+ 위험)
+    skew_prices = yf_p.get_current_prices([INDEX_SYMBOLS["skew"]])
+    skew_val = (_safe_get(skew_prices, INDEX_SYMBOLS["skew"], 130)).get("price", 130) or 130
+
+    # DXY (달러인덱스)
+    dxy_prices = yf_p.get_current_prices([INDEX_SYMBOLS["dxy"]])
+    dxy_val = (_safe_get(dxy_prices, INDEX_SYMBOLS["dxy"], 104)).get("price", 104) or 104
+
+    # WTI 원유
+    wti_prices = yf_p.get_current_prices([INDEX_SYMBOLS["wti"]])
+    wti_val = (_safe_get(wti_prices, INDEX_SYMBOLS["wti"], 78)).get("price", 78) or 78
+
+    # 2Y 금리 실수집 (^IRX = 13주 T-Bill, 2Y 근사값)
+    ust2y_prices = yf_p.get_current_prices([INDEX_SYMBOLS["ust2y"]])
+    ust2y_raw = (_safe_get(ust2y_prices, INDEX_SYMBOLS["ust2y"], None)).get("price")
+    # ^IRX는 할인율(%) 기준 — 연환산 근사: value/100
+    ust2y_val = (ust2y_raw / 100) if ust2y_raw else (tnx_val - 0.5 if tnx_val else 4.0)
+
+    # 장단기 금리차: FRED T10Y2Y 우선, 실패 시 yfinance ^IRX 폴백
+    fred_spread_val = fred_spread.get("value")
+    rate_spread = fred_spread_val if fred_spread_val is not None else ((tnx_val - ust2y_val) if tnx_val else 0.0)
+
     # 2. 매크로 딕셔너리
     macro = {
         "fear_greed":     fg_data["value"],
         "vix":            vix_val,
         "sp_momentum":    sp_momentum or 0,
         "hy_spread":      _HY_SPREAD_FALLBACK,
-        "rate_spread":    tnx_val - 4.9 if tnx_val else 0,
+        "rate_spread":    rate_spread,
         "kospi_momentum": kospi_chg,
+        "dxy":            dxy_val,
+        "wti":            wti_val,
+        "skew":           skew_val,
+        "fed_assets":     fed_assets.get("value", 7.0),   # 연준 총자산 (조 달러)
     }
 
     # 3. 시장 온도 & 판단
@@ -90,8 +122,8 @@ async def build_market_response() -> MarketResponse:
         QuickMetric(label="F&G",   value=str(fg_data["value"]),                   color=fg_color,   sub=fg_data["label"]),
         QuickMetric(label="환율",  value=_fmt_price(fx_val),                      color=fx_color,   sub="USD/KRW"),
         QuickMetric(label="금리",  value=f"{tnx_val:.2f}%" if tnx_val else "—",  color=tnx_color,  sub="미국 10Y"),
-        QuickMetric(label="코스피",value=_fmt_price(kospi_val),                   color=_chg_color(kospi_chg >= 0), sub=_fmt_chg(kospi_chg)),
-        QuickMetric(label="S&P",   value=_fmt_price(sp_val.get("price")),         color=_chg_color(sp_val.get("up", True)), sub=_fmt_chg(sp_val.get("change_pct"))),
+        QuickMetric(label="코스피",value=_fmt_price(kospi_val),                   color=_chg_color(kospi_chg >= 0),  sub=_fmt_chg(kospi_chg)),
+        QuickMetric(label="코스닥",value=_fmt_price(kosdaq_val),                  color=_chg_color(kosdaq_chg >= 0), sub=_fmt_chg(kosdaq_chg)),
     ]
 
     # 5. 수급 데이터
@@ -193,9 +225,12 @@ def _build_summary(temp: int, fg: dict, sp_mom: float) -> str:
 
 def _build_market_ctd(macro: dict, supply: dict, temp: int) -> list[CTDNode]:
     """시장 CTD 체인 5노드 동적 생성."""
-    fg = macro["fear_greed"]
-    vix = macro["vix"]
-    rate = macro["rate_spread"]
+    fg          = macro["fear_greed"]
+    vix         = macro["vix"]
+    rate        = macro["rate_spread"]
+    dxy         = macro.get("dxy", 104)
+    fed_assets  = macro.get("fed_assets", 7.0)
+    skew        = macro.get("skew", 130)
     foreign_dir = supply.get("foreign", {}).get("direction", 0)
 
     nodes = [
@@ -206,10 +241,10 @@ def _build_market_ctd(macro: dict, supply: dict, temp: int) -> list[CTDNode]:
             title="매크로 환경 분석",
             rows=[
                 CTDRow(text=f"장단기금리차 {rate:+.2f}% — {'역전 해소' if rate > 0 else '역전 지속'}", tag="핵심", cls="t-core" if rate > 0 else "t-warn"),
-                CTDRow(text="미국 10Y 금리 — 고점 대비 안정화", tag="긍정", cls="t-bull"),
-                CTDRow(text="하이일드 스프레드 3.8% — 신용위기 없음", tag="긍정", cls="t-bull"),
+                CTDRow(text=f"연준 총자산 ${fed_assets:.1f}조 — {'긴축 유지' if fed_assets < 7 else 'QT 진행 중'}", tag="참고", cls="t-hold"),
+                CTDRow(text=f"달러인덱스 DXY {dxy:.1f} — {'약달러 우호' if dxy < 102 else '강달러 부담'}", tag="주의" if dxy > 106 else "긍정", cls="t-warn" if dxy > 106 else "t-bull"),
             ],
-            conclusion=f"금리 {'안정' if rate > -0.5 else '역전'} + 스프레드 정상화 — <strong>매크로 역풍 {'해소' if rate > 0 else '주시'} 구간</strong>.",
+            conclusion=f"금리 {'안정' if rate > -0.5 else '역전'} + 연준자산 ${fed_assets:.1f}조 — <strong>매크로 역풍 {'해소' if rate > 0 else '주시'} 구간</strong>.",
         ),
         CTDNode(
             num="02", text="시장\n심리",

@@ -8,7 +8,7 @@ import logging
 from providers import yahoo_finance as yf_p
 from providers import krx as krx_p
 from services import technical as ta
-from services.score_engine import calculate_iq_score
+from services.score_engine import calculate_iq_score, calc_dcf_upside
 from config import ALL_STOCKS, RADAR_AXES
 from schemas import (
     StockDetailResponse, StockHeader, StockListItem,
@@ -264,18 +264,33 @@ def _build_buy_plan(price: float, score: float, is_domestic: bool) -> BuyPlan:
     )
 
 
+def _capex_from_info(info: dict) -> Optional[float]:
+    """시가총액 대비 CapEx 비율(%) 계산. cashflow에 없을 경우 None."""
+    capex = info.get("capitalExpenditures") or info.get("capitalExpenditure")
+    mktcap = info.get("marketCap", 1) or 1
+    if capex and mktcap:
+        return abs(capex) / mktcap * 100
+    return None
+
+
 def _build_drill(info: dict, tech: dict, score_data: dict, supply: dict, is_domestic: bool) -> dict[str, DrillData]:
-    gm    = (info.get("grossMargins") or 0) * 100
-    om    = (info.get("operatingMargins") or 0) * 100
-    eps_g = (info.get("earningsQuarterlyGrowth") or 0) * 100
-    rev_g = (info.get("revenueGrowth") or 0) * 100
-    fpe   = info.get("forwardPE") or 15
-    peg   = info.get("pegRatio") or 1
-    de    = info.get("debtToEquity") or 30
-    cr    = info.get("currentRatio") or 2
-    beta  = info.get("beta") or 1.0
-    rsi   = tech.get("rsi") or 50
-    stoch = tech.get("stoch_rsi") or 50
+    gm      = (info.get("grossMargins") or 0) * 100
+    om      = (info.get("operatingMargins") or 0) * 100
+    eps_g   = (info.get("earningsQuarterlyGrowth") or 0) * 100
+    rev_g   = (info.get("revenueGrowth") or 0) * 100
+    fpe     = info.get("forwardPE") or 15
+    tpe     = info.get("trailingPE") or 0
+    peg     = info.get("pegRatio") or 1
+    ev_ebitda = info.get("enterpriseToEbitda") or 0
+    ev_rev  = info.get("enterpriseToRevenue") or 0
+    pb      = info.get("priceToBook") or 0
+    mktcap  = info.get("marketCap") or 0
+    capex_pct = _capex_from_info(info)
+    de      = info.get("debtToEquity") or 30
+    cr      = info.get("currentRatio") or 2
+    beta    = info.get("beta") or 1.0
+    rsi     = tech.get("rsi") or 50
+    stoch   = tech.get("stoch_rsi") or 50
 
     return {
         "비즈니스 품질": DrillData(
@@ -299,9 +314,14 @@ def _build_drill(info: dict, tech: dict, score_data: dict, supply: dict, is_dome
         "밸류에이션": DrillData(
             title="밸류에이션 상세",
             rows=[
-                DrillRow(n="Fwd P/E",   v=f"{fpe:.1f}x", c="#30d158" if fpe < 15 else ("#ffd60a" if fpe < 25 else "#ff453a"), s="저평가" if fpe < 15 else ("적정" if fpe < 25 else "고평가")),
-                DrillRow(n="PEG",       v=f"{peg:.2f}",  c="#30d158" if peg < 1 else ("#ffd60a" if peg < 2 else "#ff453a"),   s="매력적" if peg < 1 else ("보통" if peg < 2 else "고평가")),
-                DrillRow(n="EV/EBITDA", v=f"{(info.get('enterpriseToEbitda') or 15):.1f}x", c="#0a84ff", s="참고"),
+                DrillRow(n="P/E Forward",  v=f"{fpe:.1f}x",   c="#30d158" if fpe < 15 else ("#ffd60a" if fpe < 25 else "#ff453a"), s="저평가" if fpe < 15 else ("적정" if fpe < 25 else "고평가")),
+                DrillRow(n="P/E Trailing", v=f"{tpe:.1f}x" if tpe else "—", c="#30d158" if 0 < tpe < 20 else "#ffd60a", s="저평가" if 0 < tpe < 20 else "참고"),
+                DrillRow(n="PEG",          v=f"{peg:.2f}",     c="#30d158" if peg < 1 else ("#ffd60a" if peg < 2 else "#ff453a"),   s="매력적" if peg < 1 else ("보통" if peg < 2 else "고평가")),
+                DrillRow(n="EV/Revenue",   v=f"{ev_rev:.1f}x" if ev_rev else "—", c="#30d158" if 0 < ev_rev < 5 else "#ffd60a", s="매력적" if 0 < ev_rev < 5 else "참고"),
+                DrillRow(n="EV/EBITDA",    v=f"{ev_ebitda:.1f}x" if ev_ebitda else "—", c="#0a84ff", s="참고"),
+                DrillRow(n="P/Book",       v=f"{pb:.2f}x" if pb else "—", c="#30d158" if 0 < pb < 3 else "#ffd60a", s="저평가" if 0 < pb < 3 else "참고"),
+                DrillRow(n="시가총액",     v=f"${mktcap/1e12:.2f}T" if mktcap > 1e12 else (f"${mktcap/1e9:.1f}B" if mktcap > 1e9 else "—"), c="#0a84ff", s="참고"),
+                DrillRow(n="DCF 업사이드", v=f"{calc_dcf_upside(info):+.0f}%" if calc_dcf_upside(info) is not None else "—", c="#30d158" if (calc_dcf_upside(info) or 0) > 20 else "#ffd60a", s="업사이드" if (calc_dcf_upside(info) or 0) > 0 else "적정"),
             ],
             insight=f"Fwd P/E {fpe:.1f}x — <strong>{'성장 대비 저평가 매력' if fpe < 20 else '밸류에이션 부담 존재'}</strong>.",
         ),
@@ -317,9 +337,10 @@ def _build_drill(info: dict, tech: dict, score_data: dict, supply: dict, is_dome
         "재무 건전성": DrillData(
             title="재무 건전성 상세",
             rows=[
-                DrillRow(n="부채비율",        v=f"{de:.0f}%",  c="#30d158" if de < 50 else ("#ffd60a" if de < 100 else "#ff453a"),  s="안전" if de < 50 else ("보통" if de < 100 else "위험")),
-                DrillRow(n="Current Ratio",   v=f"{cr:.1f}x",  c="#30d158" if cr > 2 else ("#ffd60a" if cr > 1 else "#ff453a"),     s="우수" if cr > 2 else ("보통" if cr > 1 else "주의")),
-                DrillRow(n="FCF",             v="흑자" if (info.get("freeCashflow") or 0) > 0 else "적자", c="#30d158" if (info.get("freeCashflow") or 0) > 0 else "#ff453a", s="건전" if (info.get("freeCashflow") or 0) > 0 else "주의"),
+                DrillRow(n="부채비율",      v=f"{de:.0f}%", c="#30d158" if de < 50 else ("#ffd60a" if de < 100 else "#ff453a"), s="안전" if de < 50 else ("보통" if de < 100 else "위험")),
+                DrillRow(n="Current Ratio", v=f"{cr:.1f}x", c="#30d158" if cr > 2 else ("#ffd60a" if cr > 1 else "#ff453a"),   s="우수" if cr > 2 else ("보통" if cr > 1 else "주의")),
+                DrillRow(n="FCF",           v="흑자" if (info.get("freeCashflow") or 0) > 0 else "적자", c="#30d158" if (info.get("freeCashflow") or 0) > 0 else "#ff453a", s="건전" if (info.get("freeCashflow") or 0) > 0 else "주의"),
+                DrillRow(n="CapEx/시총",    v=f"{capex_pct:.1f}%" if capex_pct else "—", c="#0a84ff" if capex_pct and capex_pct > 3 else "#ffd60a", s="적극투자" if capex_pct and capex_pct > 3 else "보수적"),
             ],
             insight=f"부채비율 {de:.0f}% — <strong>{'재무 위기 가능성 낮음' if de < 100 else '재무 부담 모니터링 필요'}</strong>.",
         ),
@@ -344,10 +365,25 @@ def _build_drill(info: dict, tech: dict, score_data: dict, supply: dict, is_dome
         "세후 수익률": DrillData(
             title="세후 수익률 상세",
             rows=[
-                DrillRow(n="양도소득세",     v="0%" if is_domestic else "22%",       c="#30d158" if is_domestic else "#ffd60a", s="비과세" if is_domestic else "과세"),
-                DrillRow(n="ISA 활용",       v="가능" if is_domestic else "제한",     c="#30d158" if is_domestic else "#ffd60a", s="절세 가능" if is_domestic else "직접 납부"),
-                DrillRow(n="세후 목표수익률", v="+45%+" if is_domestic else "+35%+",  c="#30d158",                               s="목표"),
+                # ── 양도소득세 ──────────────────────────────────
+                DrillRow(n="양도소득세",       v="0%" if is_domestic else "22%",            c="#30d158" if is_domestic else "#ffd60a", s="비과세" if is_domestic else "기본세율"),
+                # ── 배당소득세 ──────────────────────────────────
+                DrillRow(n="배당소득세",       v="15.4%",                                   c="#ffd60a",                               s="원천징수"),
+                # ── 환율 손익 과세 ──────────────────────────────
+                DrillRow(n="환율 손익 과세",   v="없음" if is_domestic else "양도차익 포함", c="#30d158" if is_domestic else "#ffd60a", s="비과세" if is_domestic else "과세"),
+                # ── ISA 중개형 ──────────────────────────────────
+                DrillRow(n="ISA 중개형",       v="연 2,000만원 비과세" if is_domestic else "해외ETF 9.9% 분리과세", c="#30d158", s="활용 권장"),
+                # ── 연금저축펀드 ────────────────────────────────
+                DrillRow(n="연금저축펀드",     v="400만원 16.5% 세액공제",                  c="#30d158",                               s="환급 최대 66만원"),
+                # ── IRP ─────────────────────────────────────────
+                DrillRow(n="IRP",              v="추가 300만원 공제",                        c="#30d158",                               s="환급 추가 49.5만원"),
+                # ── 최적화 전략 ─────────────────────────────────
+                DrillRow(n="세후 목표수익률",  v="+45%+" if is_domestic else "+35%+",       c="#30d158",                               s="목표"),
             ],
-            insight=f"{'국내 종목 양도세 0% — 해외 대비 결정적 우위' if is_domestic else '해외 종목 양도세 22% 감안 수익률 계획 필수'}.",
+            insight=(
+                "국내 종목: 양도세 0% + ISA 활용 시 세후 수익률 극대화 — <strong>해외 대비 결정적 우위</strong>."
+                if is_domestic else
+                "해외 종목: 양도세 22% + 배당세 15.4% 감안 — <strong>ISA/연금저축 계좌 활용으로 절세 최적화 필수</strong>."
+            ),
         ),
     }
