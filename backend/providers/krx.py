@@ -1,4 +1,4 @@
-﻿"""
+"""
 pykrx provider — 한국거래소 무료 데이터.
 수급(외국인/기관/개인) + 코스피/코스닥 시세.
 """
@@ -106,4 +106,28 @@ def get_stock_price(code: str) -> Optional[dict]:
         }
     except Exception as e:
         log.warning(f"[KRX] stock price failed for {code}: {e}")
+        return None
+
+
+def get_stock_ohlcv(code: str, days: int = 180) -> Optional[object]:
+    """
+    한국 종목 OHLCV 히스토리 반환 (기술적 지표 계산용).
+    yfinance 컬럼 규격(Open/High/Low/Close/Volume)으로 변환해 반환.
+    """
+    try:
+        import pandas as pd
+        from pykrx import stock
+        end = _today()
+        start = _n_days_ago(days + 10)
+        df = stock.get_market_ohlcv(start, end, code)
+        if df.empty:
+            return None
+        # pykrx 컬럼 → yfinance 호환 컬럼명으로 변환
+        df = df.rename(columns={
+            "시가": "Open", "고가": "High", "저가": "Low",
+            "종가": "Close", "거래량": "Volume",
+        })
+        return df[["Open", "High", "Low", "Close", "Volume"]]
+    except Exception as e:
+        log.warning(f"[KRX] ohlcv failed for {code}: {e}")
         return None

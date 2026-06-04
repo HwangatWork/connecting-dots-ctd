@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from services.stock_service import get_stocks_list, get_stock_detail
 from config import CACHE_TTL, ALL_STOCKS
 from cache import cache

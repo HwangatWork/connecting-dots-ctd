@@ -1,4 +1,4 @@
-﻿"""
+"""
 Technical indicator calculations.
 Input: yfinance OHLCV DataFrame
 Output: dict of indicator values

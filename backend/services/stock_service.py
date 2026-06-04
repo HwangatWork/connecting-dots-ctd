@@ -42,7 +42,11 @@ async def get_stocks_list(group: str) -> list[StockListItem]:
 
             chg_str = f"{'+' if chg >= 0 else ''}{chg:.1f}%"
 
-            df = yf_p.get_price_history(s["yahoo"], period="6mo")
+            # 국내 종목은 pykrx OHLCV 우선, 실패 시 yfinance 폴백
+            if group == "domestic":
+                df = krx_p.get_stock_ohlcv(s["code"]) or yf_p.get_price_history(s["yahoo"], period="6mo")
+            else:
+                df = yf_p.get_price_history(s["yahoo"], period="6mo")
             tech = ta.calc_all(df) if df is not None else {}
             info = yf_p.get_ticker_info(s["yahoo"])
             score_data = calculate_iq_score(info, tech, {}, {}, group == "domestic")
@@ -70,16 +74,18 @@ async def get_stock_detail(code: str) -> StockDetailResponse:
 
     is_domestic = meta["group"] == "domestic"
 
-    df = yf_p.get_price_history(meta["yahoo"], period="6mo")
-    info = yf_p.get_ticker_info(meta["yahoo"])
-    tech = ta.calc_all(df) if df is not None else {}
-
-    supply_raw = {}
+    # 국내 종목은 pykrx OHLCV 우선, 실패 시 yfinance 폴백
     if is_domestic:
+        df = krx_p.get_stock_ohlcv(code) or yf_p.get_price_history(meta["yahoo"], period="6mo")
         krx_price = krx_p.get_stock_price(code)
         supply_raw = krx_p.get_supply_data(days=20)
     else:
+        df = yf_p.get_price_history(meta["yahoo"], period="6mo")
         krx_price = None
+        supply_raw = {}
+
+    info = yf_p.get_ticker_info(meta["yahoo"])
+    tech = ta.calc_all(df) if df is not None else {}
 
     if is_domestic and krx_price:
         price_val = krx_price["price"]
@@ -144,50 +150,50 @@ def _build_stock_ctd(meta: dict, info: dict, tech: dict, score_data: dict) -> li
     score = score_data["overall"]
 
     return [
-        CTDNode(num="01", text="Macro\nEnv", badge="t-core", badge_text="Key",
-            title="Macro Environment & Sector",
+        CTDNode(num="01", text="거시\n환경", badge="t-core", badge_text="핵심",
+            title="거시 환경 & 섹터",
             rows=[
-                CTDRow(text=f"Sector: {sector} — AI/semi cycle beneficiary", tag="Key", cls="t-core"),
-                CTDRow(text="Global AI CapEx $700B+ — direct demand tailwind", tag="Strong", cls="t-bull"),
-                CTDRow(text="Macro headwind clearing — rates stabilizing", tag="Positive", cls="t-bull"),
+                CTDRow(text=f"섹터: {sector} — AI·반도체 수혜 사이클", tag="핵심", cls="t-core"),
+                CTDRow(text="글로벌 AI CapEx $700B+ — 수요 직접 연결", tag="강세", cls="t-bull"),
+                CTDRow(text="매크로 역풍 완화 — 금리 안정화 구간", tag="긍정", cls="t-bull"),
             ],
-            conclusion=f"AI cycle + rate stability — <strong>{name} structural tailwind</strong>."),
+            conclusion=f"AI 투자 사이클 + 금리 안정 — <strong>{name} 구조적 수혜 환경</strong>."),
 
-        CTDNode(num="02", text="EPS\nGrowth", badge="t-bull", badge_text="Strong",
-            title="EPS & Revenue Growth",
+        CTDNode(num="02", text="실적\n성장", badge="t-bull", badge_text="강세",
+            title="EPS · 매출 성장",
             rows=[
-                CTDRow(text=f"EPS YoY {eps_g*100:+.0f}% — {'dominant' if eps_g > 1 else 'growing'} earnings", tag="Top" if eps_g > 1 else "Strong", cls="t-bull"),
-                CTDRow(text=f"Gross Margin {(info.get('grossMargins',0)*100):.0f}% — pricing power confirmed", tag="Positive", cls="t-bull"),
-                CTDRow(text="FCF positive — buyback/dividend capacity", tag="Healthy", cls="t-bull"),
+                CTDRow(text=f"EPS YoY {eps_g*100:+.0f}% — {'압도적' if eps_g > 1 else '성장'} 실적", tag="최상위" if eps_g > 1 else "강세", cls="t-bull"),
+                CTDRow(text=f"Gross Margin {(info.get('grossMargins',0)*100):.0f}% — 가격 결정력 확인", tag="긍정", cls="t-bull"),
+                CTDRow(text="FCF 흑자 — 자사주 매입·배당 여력", tag="건전", cls="t-bull"),
             ],
-            conclusion=f"Earnings outpacing price — <strong>expansion zone, not bubble</strong>."),
+            conclusion=f"실적 성장이 주가를 <strong>앞서는 구간 — 버블 아님</strong>."),
 
-        CTDNode(num="03", text="Valuation", badge="t-bull" if fpe < 20 else "t-warn", badge_text="Cheap" if fpe < 20 else "Caution",
-            title="Valuation Analysis",
+        CTDNode(num="03", text="밸류\n에이션", badge="t-bull" if fpe < 20 else "t-warn", badge_text="저평가" if fpe < 20 else "주의",
+            title="밸류에이션 분석",
             rows=[
-                CTDRow(text=f"Fwd P/E {fpe:.1f}x — {'undervalued' if fpe < 20 else 'watch premium'}", tag="Key", cls="t-bull" if fpe < 20 else "t-warn"),
-                CTDRow(text=f"PEG {(info.get('pegRatio',1)):.2f} — {'attractive vs growth' if (info.get('pegRatio',1) or 1) < 1.5 else 'growth premium high'}", tag="Cheap" if (info.get('pegRatio',1) or 1) < 1.5 else "Caution", cls="t-bull" if (info.get('pegRatio',1) or 1) < 1.5 else "t-warn"),
-                CTDRow(text="DCF vs current price — upside exists", tag="Positive", cls="t-bull"),
+                CTDRow(text=f"Fwd P/E {fpe:.1f}x — {'저평가' if fpe < 20 else '고평가 주의'}", tag="핵심", cls="t-bull" if fpe < 20 else "t-warn"),
+                CTDRow(text=f"PEG {(info.get('pegRatio',1)):.2f} — {'성장 대비 매력적' if (info.get('pegRatio',1) or 1) < 1.5 else '성장 프리미엄 높음'}", tag="저평가" if (info.get('pegRatio',1) or 1) < 1.5 else "주의", cls="t-bull" if (info.get('pegRatio',1) or 1) < 1.5 else "t-warn"),
+                CTDRow(text="DCF 내재가치 대비 현재가 분석 → 업사이드 존재", tag="긍정", cls="t-bull"),
             ],
-            conclusion=f"Fwd P/E {fpe:.1f}x — <strong>market has not fully priced in growth</strong>."),
+            conclusion=f"Fwd P/E {fpe:.1f}x. <strong>시장이 아직 충분히 반영 못한 구간</strong>."),
 
-        CTDNode(num="04", text="Tech\nSignal", badge="t-warn" if (tech.get("rsi", 50) or 50) > 70 else "t-bull", badge_text="Overbought" if (tech.get("rsi", 50) or 50) > 70 else "Neutral",
-            title="Technical Analysis",
+        CTDNode(num="04", text="기술적\n신호", badge="t-warn" if (tech.get("rsi", 50) or 50) > 70 else "t-bull", badge_text="과열" if (tech.get("rsi", 50) or 50) > 70 else "중립",
+            title="기술적 분석",
             rows=[
-                CTDRow(text=f"RSI {tech.get('rsi', '—')} — {tech.get('rsi_signal','neutral')}", tag="Check", cls="t-warn" if (tech.get("rsi", 50) or 50) > 70 else "t-bull"),
-                CTDRow(text=f"MA50 {'>' if (tech.get('ma50') or 0) > (tech.get('ma200') or 0) else '<'} MA200 — {tech.get('ma_signal','neutral')} cross", tag="Strong" if tech.get("ma_signal") == "golden" else "Caution", cls="t-bull" if tech.get("ma_signal") == "golden" else "t-warn"),
-                CTDRow(text=f"Stoch RSI {tech.get('stoch_rsi', '—')} — {'overbought, DCA only' if (tech.get('stoch_rsi', 50) or 50) > 80 else 'normal zone'}", tag="Warning" if (tech.get("stoch_rsi", 50) or 50) > 80 else "Positive", cls="t-warn" if (tech.get("stoch_rsi", 50) or 50) > 80 else "t-bull"),
+                CTDRow(text=f"RSI {tech.get('rsi', '—')} — {tech.get('rsi_signal','neutral')}", tag="확인", cls="t-warn" if (tech.get("rsi", 50) or 50) > 70 else "t-bull"),
+                CTDRow(text=f"MA50 {'>' if (tech.get('ma50') or 0) > (tech.get('ma200') or 0) else '<'} MA200 — {tech.get('ma_signal','neutral')} 크로스", tag="강세" if tech.get("ma_signal") == "golden" else "주의", cls="t-bull" if tech.get("ma_signal") == "golden" else "t-warn"),
+                CTDRow(text=f"Stoch RSI {tech.get('stoch_rsi', '—')} — {'과열, 분할 접근' if (tech.get('stoch_rsi', 50) or 50) > 80 else '정상 구간'}", tag="경고" if (tech.get("stoch_rsi", 50) or 50) > 80 else "긍정", cls="t-warn" if (tech.get("stoch_rsi", 50) or 50) > 80 else "t-bull"),
             ],
-            conclusion=f"Technical {'overbought — DCA required' if (tech.get('rsi', 50) or 50) > 70 else 'neutral — good entry'}. <strong>Tranche entry recommended</strong>."),
+            conclusion=f"기술적 {'과열 → 분할 접근 필수' if (tech.get('rsi', 50) or 50) > 70 else '중립 → 매수 적기'}. <strong>단계적 진입 권장</strong>."),
 
-        CTDNode(num="Con", text="Decision", badge="t-act" if score >= 7 else "t-hold", badge_text="Buy" if score >= 7 else "Hold",
-            title="Final Investment Decision",
+        CTDNode(num="결론", text="투자\n판단", badge="t-act" if score >= 7 else "t-hold", badge_text="매수" if score >= 7 else "관망",
+            title="최종 투자 판단",
             rows=[
-                CTDRow(text=f"IQ Score {score} — {'buy recommended' if score >= 7 else 'hold/watch'}", tag="Conclusion", cls="t-act" if score >= 7 else "t-hold"),
-                CTDRow(text="3-tranche DCA — no lump-sum", tag="Action", cls="t-act"),
-                CTDRow(text=f"After-tax target: {'+35%+' if score >= 7.5 else '+20%+'}", tag="Target", cls="t-bull"),
+                CTDRow(text=f"IQ 스코어 {score} — {'매수 권장' if score >= 7 else '관망 유지'}", tag="결론", cls="t-act" if score >= 7 else "t-hold"),
+                CTDRow(text="분할 3단계 접근 — 한 번에 전량 매수 금지", tag="행동", cls="t-act"),
+                CTDRow(text=f"세후 목표수익률 {'+35%+ 이상' if score >= 7.5 else '+20%+'}", tag="목표", cls="t-bull"),
             ],
-            conclusion=f"<strong>{'3-tranche DCA recommended' if score >= 7 else 'Monitor and enter on confirmation'}</strong>."),
+            conclusion=f"<strong>{'3단계 분할 매수 실행 권장' if score >= 7 else '추가 확인 후 진입 검토'}</strong>."),
     ]
 
 
@@ -198,15 +204,15 @@ def _build_validity(info: dict, tech: dict, is_domestic: bool) -> list[ValidityR
     stoch = tech.get("stoch_rsi", 50) or 50
 
     if eps_g > 0.5:
-        rows.append(ValidityRow(icon="✅", text=f"EPS YoY +{eps_g*100:.0f}% growth valid", date=datetime.now().strftime("%Y.%m.%d") + " confirmed", status="Valid", cls="t-bull"))
+        rows.append(ValidityRow(icon="✅", text=f"EPS YoY +{eps_g*100:.0f}% 성장 유효", date=datetime.now().strftime("%Y.%m.%d") + " 확인", status="유효", cls="t-bull"))
     if is_domestic:
-        rows.append(ValidityRow(icon="✅", text="Domestic stock — capital gains tax 0% (tax-exempt)", date="Per regulation", status="Valid", cls="t-bull"))
+        rows.append(ValidityRow(icon="✅", text="국내 종목 — 양도소득세 0% (비과세)", date="규정 기준", status="유효", cls="t-bull"))
     if rsi > 70:
-        rows.append(ValidityRow(icon="⚠️", text=f"RSI {rsi:.0f} — short-term overbought warning", date=datetime.now().strftime("%Y.%m.%d") + " updated", status="Warning", cls="t-warn"))
+        rows.append(ValidityRow(icon="⚠️", text=f"RSI {rsi:.0f} — 단기 과열 구간 경고", date=datetime.now().strftime("%Y.%m.%d") + " 갱신", status="경고", cls="t-warn"))
     if stoch > 80:
-        rows.append(ValidityRow(icon="⚠️", text=f"Stoch RSI {stoch:.0f} — DCA required", date=datetime.now().strftime("%Y.%m.%d") + " updated", status="Warning", cls="t-warn"))
+        rows.append(ValidityRow(icon="⚠️", text=f"Stoch RSI {stoch:.0f} — 분할 매수 필요", date=datetime.now().strftime("%Y.%m.%d") + " 갱신", status="경고", cls="t-warn"))
     if not rows:
-        rows.append(ValidityRow(icon="✅", text="Key investment thesis valid — continue monitoring", date=datetime.now().strftime("%Y.%m.%d"), status="Valid", cls="t-bull"))
+        rows.append(ValidityRow(icon="✅", text="주요 투자 논거 유효 — 추가 모니터링 권장", date=datetime.now().strftime("%Y.%m.%d"), status="유효", cls="t-bull"))
 
     return rows
 
@@ -230,9 +236,9 @@ def _build_buy_plan(price: float, score: float, is_domestic: bool) -> BuyPlan:
         return f"${v:,.0f}" if v >= 1 else f"${v:.2f}"
 
     levels = [
-        BuyLevel(label="Current Zone", range=f"{_fmt(cur_lo, is_domestic)}~{_fmt(cur_hi, is_domestic)}", weight="30%", color="var(--ac)", fill=45),
-        BuyLevel(label="Dip 1",        range=f"{_fmt(dip1_lo, is_domestic)}~{_fmt(dip1_hi, is_domestic)}", weight="40%", color="var(--gr)", fill=68),
-        BuyLevel(label="Dip 2",        range=f"{_fmt(dip2_lo, is_domestic)}~{_fmt(dip2_hi, is_domestic)}", weight="30%", color="var(--ye)", fill=100),
+        BuyLevel(label="현재 구간", range=f"{_fmt(cur_lo, is_domestic)}~{_fmt(cur_hi, is_domestic)}", weight="30%", color="var(--ac)", fill=45),
+        BuyLevel(label="1차 조정",  range=f"{_fmt(dip1_lo, is_domestic)}~{_fmt(dip1_hi, is_domestic)}", weight="40%", color="var(--gr)", fill=68),
+        BuyLevel(label="2차 조정",  range=f"{_fmt(dip2_lo, is_domestic)}~{_fmt(dip2_hi, is_domestic)}", weight="30%", color="var(--ye)", fill=100),
     ]
 
     expected_ret = target / price - 1
@@ -245,15 +251,15 @@ def _build_buy_plan(price: float, score: float, is_domestic: bool) -> BuyPlan:
         stop_loss=_fmt(stop_loss, is_domestic),
         after_tax_domestic=AfterTax(
             ret=f"+{domestic_ret*100:.0f}%",
-            label="After-tax (Domestic 0%)" if is_domestic else "After-tax (22%)",
+            label="세후 수익 (국내 0%)" if is_domestic else "세후 수익 (22%)",
             color="var(--gr)",
-            tax_note="Cap gains 0%" if is_domestic else "Cap gains 22%",
+            tax_note="양도세 0%" if is_domestic else "양도세 22%",
         ),
         after_tax_overseas=AfterTax(
             ret=f"+{overseas_ret*100:.0f}%",
-            label="Overseas equiv (22%)",
+            label="해외 환산 (22%)",
             color="var(--ye)",
-            tax_note="22% applied",
+            tax_note="세금 22% 적용",
         ),
     )
 
@@ -272,76 +278,76 @@ def _build_drill(info: dict, tech: dict, score_data: dict, supply: dict, is_dome
     stoch = tech.get("stoch_rsi") or 50
 
     return {
-        "Business Quality": DrillData(
-            title="Business Quality Detail",
+        "비즈니스 품질": DrillData(
+            title="비즈니스 품질 상세",
             rows=[
-                DrillRow(n="Gross Margin",    v=f"{gm:.1f}%",  c="#30d158" if gm > 40 else "#ffd60a",  s="Strong" if gm > 40 else "Average"),
-                DrillRow(n="Operating Margin",v=f"{om:.1f}%",  c="#30d158" if om > 20 else "#ffd60a",  s="Strong" if om > 20 else "Average"),
-                DrillRow(n="Competitive Moat",v="Wide" if gm > 50 else "Narrow", c="#0a84ff", s="Assessment"),
+                DrillRow(n="Gross Margin", v=f"{gm:.1f}%", c="#30d158" if gm > 40 else "#ffd60a", s="우수" if gm > 40 else "보통"),
+                DrillRow(n="영업이익률",   v=f"{om:.1f}%", c="#30d158" if om > 20 else "#ffd60a", s="우수" if om > 20 else "보통"),
+                DrillRow(n="경쟁 해자",    v="높음" if gm > 50 else "보통", c="#0a84ff", s="평가"),
             ],
-            insight=f"Gross Margin {gm:.0f}% — <strong>{'strong pricing power' if gm > 40 else 'watch competitive pressure'}</strong>.",
+            insight=f"Gross Margin {gm:.0f}% — <strong>{'높은 가격 결정력 보유' if gm > 40 else '경쟁 심화 주시'}</strong>.",
         ),
-        "Growth Momentum": DrillData(
-            title="Growth Momentum Detail",
+        "성장 모멘텀": DrillData(
+            title="성장 모멘텀 상세",
             rows=[
-                DrillRow(n="EPS YoY",     v=f"{eps_g:+.0f}%", c="#30d158" if eps_g > 20 else "#ffd60a", s="Strong" if eps_g > 20 else "Average"),
-                DrillRow(n="Revenue YoY", v=f"{rev_g:+.0f}%", c="#30d158" if rev_g > 10 else "#ffd60a", s="Growing" if rev_g > 10 else "Flat"),
-                DrillRow(n="1M Momentum", v=f"{tech.get('momentum_1m',0):+.1f}%", c="#30d158" if (tech.get("momentum_1m") or 0) > 0 else "#ff453a", s="Up" if (tech.get("momentum_1m") or 0) > 0 else "Down"),
+                DrillRow(n="EPS YoY",   v=f"{eps_g:+.0f}%", c="#30d158" if eps_g > 20 else "#ffd60a", s="강세" if eps_g > 20 else "보통"),
+                DrillRow(n="매출 YoY",  v=f"{rev_g:+.0f}%", c="#30d158" if rev_g > 10 else "#ffd60a", s="성장" if rev_g > 10 else "정체"),
+                DrillRow(n="모멘텀 1M", v=f"{tech.get('momentum_1m',0):+.1f}%", c="#30d158" if (tech.get("momentum_1m") or 0) > 0 else "#ff453a", s="상승" if (tech.get("momentum_1m") or 0) > 0 else "하락"),
             ],
-            insight=f"EPS {eps_g:+.0f}% — <strong>{'powerful growth cycle' if eps_g > 50 else 'steady growth trend'}</strong>.",
+            insight=f"EPS {eps_g:+.0f}% 성장 — <strong>{'강력한 성장 사이클' if eps_g > 50 else '안정적 성장세'}</strong>.",
         ),
-        "Valuation": DrillData(
-            title="Valuation Detail",
+        "밸류에이션": DrillData(
+            title="밸류에이션 상세",
             rows=[
-                DrillRow(n="Fwd P/E",   v=f"{fpe:.1f}x", c="#30d158" if fpe < 15 else ("#ffd60a" if fpe < 25 else "#ff453a"), s="Cheap" if fpe < 15 else ("Fair" if fpe < 25 else "Expensive")),
-                DrillRow(n="PEG",       v=f"{peg:.2f}",  c="#30d158" if peg < 1 else ("#ffd60a" if peg < 2 else "#ff453a"),   s="Attractive" if peg < 1 else ("Fair" if peg < 2 else "Expensive")),
-                DrillRow(n="EV/EBITDA", v=f"{(info.get('enterpriseToEbitda') or 15):.1f}x", c="#0a84ff", s="Reference"),
+                DrillRow(n="Fwd P/E",   v=f"{fpe:.1f}x", c="#30d158" if fpe < 15 else ("#ffd60a" if fpe < 25 else "#ff453a"), s="저평가" if fpe < 15 else ("적정" if fpe < 25 else "고평가")),
+                DrillRow(n="PEG",       v=f"{peg:.2f}",  c="#30d158" if peg < 1 else ("#ffd60a" if peg < 2 else "#ff453a"),   s="매력적" if peg < 1 else ("보통" if peg < 2 else "고평가")),
+                DrillRow(n="EV/EBITDA", v=f"{(info.get('enterpriseToEbitda') or 15):.1f}x", c="#0a84ff", s="참고"),
             ],
-            insight=f"Fwd P/E {fpe:.1f}x — <strong>{'cheap vs growth' if fpe < 20 else 'valuation premium exists'}</strong>.",
+            insight=f"Fwd P/E {fpe:.1f}x — <strong>{'성장 대비 저평가 매력' if fpe < 20 else '밸류에이션 부담 존재'}</strong>.",
         ),
-        "Market Timing": DrillData(
-            title="Market Timing Detail",
+        "시장 타이밍": DrillData(
+            title="시장 타이밍 상세",
             rows=[
-                DrillRow(n="RSI(14)",   v=f"{rsi:.0f}",   c="#30d158" if rsi < 60 else ("#ffd60a" if rsi < 70 else "#ff453a"),   s="OK" if rsi < 60 else ("Caution" if rsi < 70 else "Overbought")),
-                DrillRow(n="Stoch RSI", v=f"{stoch:.0f}", c="#30d158" if stoch < 60 else ("#ffd60a" if stoch < 80 else "#ff453a"), s="OK" if stoch < 60 else ("Caution" if stoch < 80 else "Overbought")),
-                DrillRow(n="MA Signal", v=tech.get("ma_signal","—"), c="#30d158" if tech.get("ma_signal") == "golden" else "#ff453a", s="Golden" if tech.get("ma_signal") == "golden" else "Dead"),
+                DrillRow(n="RSI(14)",   v=f"{rsi:.0f}",   c="#30d158" if rsi < 60 else ("#ffd60a" if rsi < 70 else "#ff453a"),   s="적정" if rsi < 60 else ("주의" if rsi < 70 else "과열")),
+                DrillRow(n="Stoch RSI", v=f"{stoch:.0f}", c="#30d158" if stoch < 60 else ("#ffd60a" if stoch < 80 else "#ff453a"), s="적정" if stoch < 60 else ("주의" if stoch < 80 else "과열")),
+                DrillRow(n="MA 신호",   v=tech.get("ma_signal","—"), c="#30d158" if tech.get("ma_signal") == "golden" else "#ff453a", s="골든" if tech.get("ma_signal") == "golden" else "데드"),
             ],
-            insight=f"{'RSI overbought — DCA entry only' if rsi > 70 else 'RSI normal — good entry'}. <strong>Stoch RSI {stoch:.0f}</strong>.",
+            insight=f"{'RSI 과열 → 분할 진입 필수' if rsi > 70 else 'RSI 정상 → 매수 적기'}. <strong>Stoch RSI {stoch:.0f}</strong>.",
         ),
-        "Financial Health": DrillData(
-            title="Financial Health Detail",
+        "재무 건전성": DrillData(
+            title="재무 건전성 상세",
             rows=[
-                DrillRow(n="D/E Ratio",      v=f"{de:.0f}%",  c="#30d158" if de < 50 else ("#ffd60a" if de < 100 else "#ff453a"),  s="Safe" if de < 50 else ("OK" if de < 100 else "Risk")),
-                DrillRow(n="Current Ratio",  v=f"{cr:.1f}x",  c="#30d158" if cr > 2 else ("#ffd60a" if cr > 1 else "#ff453a"),     s="Strong" if cr > 2 else ("OK" if cr > 1 else "Caution")),
-                DrillRow(n="FCF",            v="Positive" if (info.get("freeCashflow") or 0) > 0 else "Negative", c="#30d158" if (info.get("freeCashflow") or 0) > 0 else "#ff453a", s="Healthy" if (info.get("freeCashflow") or 0) > 0 else "Watch"),
+                DrillRow(n="부채비율",        v=f"{de:.0f}%",  c="#30d158" if de < 50 else ("#ffd60a" if de < 100 else "#ff453a"),  s="안전" if de < 50 else ("보통" if de < 100 else "위험")),
+                DrillRow(n="Current Ratio",   v=f"{cr:.1f}x",  c="#30d158" if cr > 2 else ("#ffd60a" if cr > 1 else "#ff453a"),     s="우수" if cr > 2 else ("보통" if cr > 1 else "주의")),
+                DrillRow(n="FCF",             v="흑자" if (info.get("freeCashflow") or 0) > 0 else "적자", c="#30d158" if (info.get("freeCashflow") or 0) > 0 else "#ff453a", s="건전" if (info.get("freeCashflow") or 0) > 0 else "주의"),
             ],
-            insight=f"D/E {de:.0f}% — <strong>{'financial crisis probability low' if de < 100 else 'debt burden monitoring required'}</strong>.",
+            insight=f"부채비율 {de:.0f}% — <strong>{'재무 위기 가능성 낮음' if de < 100 else '재무 부담 모니터링 필요'}</strong>.",
         ),
-        "Macro Linkage": DrillData(
-            title="Macro Linkage Detail",
+        "매크로 연계": DrillData(
+            title="매크로 연계 상세",
             rows=[
-                DrillRow(n="AI CapEx Sensitivity", v="Direct beneficiary", c="#0a84ff", s="Key"),
-                DrillRow(n="Rate Sensitivity",     v="Low" if beta < 1.2 else "High", c="#30d158" if beta < 1.2 else "#ffd60a", s="Assessment"),
-                DrillRow(n="FX Impact",            v="USD revenue" if not is_domestic else "KRW revenue", c="#30d158", s="Positive"),
+                DrillRow(n="AI CapEx 민감도", v="직접 수혜",               c="#0a84ff",                                    s="핵심"),
+                DrillRow(n="금리 민감도",     v="낮음" if beta < 1.2 else "높음", c="#30d158" if beta < 1.2 else "#ffd60a", s="평가"),
+                DrillRow(n="환율 영향",       v="달러 수익" if not is_domestic else "원화 수익", c="#30d158",               s="긍정"),
             ],
-            insight="AI cycle direct beneficiary — <strong>macro risk minimized position</strong>.",
+            insight="AI 사이클 직접 수혜 — <strong>매크로 리스크 최소화 포지션</strong>.",
         ),
-        "Risk Management": DrillData(
-            title="Risk Management Detail",
+        "리스크 관리": DrillData(
+            title="리스크 관리 상세",
             rows=[
-                DrillRow(n="Beta",           v=f"{beta:.2f}", c="#30d158" if beta < 1.2 else ("#ffd60a" if beta < 1.8 else "#ff453a"), s="Stable" if beta < 1.2 else ("Caution" if beta < 1.8 else "High Risk")),
-                DrillRow(n="52W Volatility", v=f"{(info.get('52WeekChange') or 0)*100:+.0f}%", c="#0a84ff", s="Reference"),
-                DrillRow(n="Foreign Flow",   v="Selling" if supply.get("foreign",{}).get("direction",-1) == -1 else "Buying", c="#ff453a" if supply.get("foreign",{}).get("direction",-1) == -1 else "#30d158", s="Watch" if supply.get("foreign",{}).get("direction",-1) == -1 else "Positive"),
+                DrillRow(n="Beta",      v=f"{beta:.2f}", c="#30d158" if beta < 1.2 else ("#ffd60a" if beta < 1.8 else "#ff453a"), s="안정" if beta < 1.2 else ("주의" if beta < 1.8 else "고위험")),
+                DrillRow(n="52주 변동성", v=f"{(info.get('52WeekChange') or 0)*100:+.0f}%", c="#0a84ff", s="참고"),
+                DrillRow(n="외국인 동향", v="매도" if supply.get("foreign",{}).get("direction",-1) == -1 else "매수", c="#ff453a" if supply.get("foreign",{}).get("direction",-1) == -1 else "#30d158", s="주의" if supply.get("foreign",{}).get("direction",-1) == -1 else "긍정"),
             ],
-            insight=f"Beta {beta:.2f} — <strong>{'high beta: position sizing critical' if beta > 1.5 else 'appropriate risk level'}</strong>.",
+            insight=f"Beta {beta:.2f} — <strong>{'고베타 포지션 크기 조절 필수' if beta > 1.5 else '적정 리스크 수준'}</strong>.",
         ),
-        "After-tax Return": DrillData(
-            title="After-tax Return Detail",
+        "세후 수익률": DrillData(
+            title="세후 수익률 상세",
             rows=[
-                DrillRow(n="Capital Gains Tax", v="0%" if is_domestic else "22%", c="#30d158" if is_domestic else "#ffd60a", s="Tax-exempt" if is_domestic else "Taxable"),
-                DrillRow(n="ISA Account",       v="Available" if is_domestic else "Limited", c="#30d158" if is_domestic else "#ffd60a", s="Tax saving" if is_domestic else "Direct pay"),
-                DrillRow(n="After-tax Target",  v="+45%+" if is_domestic else "+35%+", c="#30d158", s="Target"),
+                DrillRow(n="양도소득세",     v="0%" if is_domestic else "22%",       c="#30d158" if is_domestic else "#ffd60a", s="비과세" if is_domestic else "과세"),
+                DrillRow(n="ISA 활용",       v="가능" if is_domestic else "제한",     c="#30d158" if is_domestic else "#ffd60a", s="절세 가능" if is_domestic else "직접 납부"),
+                DrillRow(n="세후 목표수익률", v="+45%+" if is_domestic else "+35%+",  c="#30d158",                               s="목표"),
             ],
-            insight=f"{'Domestic: 0% cap gains — decisive advantage over overseas' if is_domestic else 'Overseas: plan returns accounting for 22% cap gains tax'}.",
+            insight=f"{'국내 종목 양도세 0% — 해외 대비 결정적 우위' if is_domestic else '해외 종목 양도세 22% 감안 수익률 계획 필수'}.",
         ),
     }

@@ -151,14 +151,14 @@ def calculate_iq_score(
     Returns: { scores: [8 floats], colors: [8 hex], overall: float }
     """
     axes = {
-        "Business Quality": score_business_quality(info),
-        "Growth Momentum":  score_growth_momentum(info, tech),
-        "Valuation":        score_valuation(info),
-        "Market Timing":    score_market_timing(tech),
-        "Financial Health": score_financial_health(info),
-        "Macro Linkage":    score_macro_linkage(info, macro),
-        "Risk Management":  score_risk_management(info, tech, supply),
-        "After-tax Return": score_after_tax_return(info, is_domestic),
+        "비즈니스 품질": score_business_quality(info),
+        "성장 모멘텀":   score_growth_momentum(info, tech),
+        "밸류에이션":    score_valuation(info),
+        "시장 타이밍":   score_market_timing(tech),
+        "재무 건전성":   score_financial_health(info),
+        "매크로 연계":   score_macro_linkage(info, macro),
+        "리스크 관리":   score_risk_management(info, tech, supply),
+        "세후 수익률":   score_after_tax_return(info, is_domestic),
     }
 
     scores = list(axes.values())
@@ -225,9 +225,9 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
 
 
 def temperature_to_verdict(temp: int) -> tuple[str, str]:
-    """Convert temperature to (verdict label, CSS color var)."""
-    if temp >= 75: return "Overheated — Caution",        "var(--re)"
-    if temp >= 60: return "DCA Buy Zone",                "var(--gr)"
-    if temp >= 45: return "Neutral — Hold",              "var(--ac)"
-    if temp >= 30: return "Start Accumulating",          "var(--ye)"
-    return "Aggressive Buy Zone",                        "var(--gr)"
+    """온도 → (판단 문장, CSS color var)"""
+    if temp >= 75: return "과열 주의 구간",    "var(--re)"
+    if temp >= 60: return "분할 매수 구간",    "var(--gr)"
+    if temp >= 45: return "중립 관망 구간",    "var(--ac)"
+    if temp >= 30: return "분할 매수 시작",    "var(--ye)"
+    return "적극 매수 구간",                   "var(--gr)"

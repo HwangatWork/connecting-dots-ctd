@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter
+from fastapi import APIRouter
 from services.market_service import build_market_response
 from config import CACHE_TTL
 from cache import cache
