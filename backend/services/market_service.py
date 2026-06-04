@@ -1,6 +1,6 @@
-﻿"""
-?�장 ?�비?????�장 ???�체 ?�이??조립.
-providers?�서 ?�시 ?�이?��? ?�집?�고 ?�코???�진?�로 ?�도 계산.
+"""
+Market service — assembles full market-tab response.
+Collects raw data from providers and runs score engine for temperature.
 """
 from datetime import datetime, timezone
 import logging
@@ -18,79 +18,71 @@ from schemas import (
 
 log = logging.getLogger(__name__)
 
-# ?�?� 가중치 ?�수 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-_HY_SPREAD_FALLBACK = 3.8   # ?�시�?HY ?�프?�드??별도 ?�료 API ?�요 ??최근�??�드코딩
+# HY spread fallback — real-time HY spread requires paid API; use recent hardcoded value
+_HY_SPREAD_FALLBACK = 3.8
 
 
 async def build_market_response() -> MarketResponse:
-    """?�장 ???�체 ?�이?��? 조립??MarketResponse 반환."""
+    """Assemble full market tab data and return MarketResponse."""
 
-    # ?�?� 1. ?�이???�집 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # 1. Collect data
     fg_data = await fg_p.get_fear_greed()
     krx_indices = krx_p.get_market_indices()
     supply_raw = krx_p.get_supply_data(days=20)
 
-    # S&P500 ?�스?�리 (모멘?� 계산??
     sp_df = yf_p.get_price_history(INDEX_SYMBOLS["sp500"], period="3mo")
     sp_momentum = ta.calc_momentum(sp_df) if sp_df is not None else 0
 
-    # ?�?� ?�퍼: 가�?dict?�서 ?�전?�게 �?추출 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # Helper: safely extract price dict, falling back to defaults
     def _safe_get(prices_dict: dict, key: str, default_price=None) -> dict:
-        """prices dict?�서 None-safe?�게 가�??�보 반환."""
         d = prices_dict.get(key) or {}
         return d if d.get("price") is not None else {"price": default_price, "change_pct": 0, "up": True}
 
-    # VIX ?�재�?    vix_info = yf_p.get_current_prices([INDEX_SYMBOLS["vix"]])
+    vix_info = yf_p.get_current_prices([INDEX_SYMBOLS["vix"]])
     vix_val = (_safe_get(vix_info, INDEX_SYMBOLS["vix"], 20)).get("price", 20) or 20
 
-    # 코스??모멘?� (None ?�전 처리)
     kospi_data = krx_indices.get("kospi") or {}
     kospi_val = kospi_data.get("value", 2800) or 2800
     kospi_chg = kospi_data.get("change_pct", 0) or 0
 
-    # 미국 10?�물 금리 (TNX)
     tnx_info = yf_p.get_current_prices([INDEX_SYMBOLS["tnx"]])
     tnx_val = (_safe_get(tnx_info, INDEX_SYMBOLS["tnx"], 4.45)).get("price", 4.45) or 4.45
 
-    # DXY
     dxy_info = yf_p.get_current_prices([INDEX_SYMBOLS["dxy"]])
     dxy_val = (_safe_get(dxy_info, INDEX_SYMBOLS["dxy"], 104)).get("price", 104) or 104
 
-    # S&P500 ?�재가
     sp_prices = yf_p.get_current_prices([INDEX_SYMBOLS["sp500"]])
     sp_val = _safe_get(sp_prices, INDEX_SYMBOLS["sp500"], 5600)
 
-    # ?�스??    nd_prices = yf_p.get_current_prices([INDEX_SYMBOLS["nasdaq"]])
+    nd_prices = yf_p.get_current_prices([INDEX_SYMBOLS["nasdaq"]])
     nd_val = _safe_get(nd_prices, INDEX_SYMBOLS["nasdaq"], 19800)
 
-    # WTI
     wti_prices = yf_p.get_current_prices([INDEX_SYMBOLS["wti"]])
     wti_val = _safe_get(wti_prices, INDEX_SYMBOLS["wti"], 78)
 
-    # USD/KRW (?�후: KRW=X ?�는 USDKRW=X)
     fx_prices = yf_p.get_current_prices(["KRW=X"])
     fx_val = (_safe_get(fx_prices, "KRW=X", 1380)).get("price", 1380) or 1380
 
-    # ?�?� 2. 매크�??�셔?�리 조립 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # 2. Build macro dict
     macro = {
         "fear_greed":     fg_data["value"],
         "vix":            vix_val,
         "sp_momentum":    sp_momentum or 0,
         "hy_spread":      _HY_SPREAD_FALLBACK,
-        "rate_spread":    tnx_val - 4.9 if tnx_val else 0,  # 10Y - 2Y 근사
+        "rate_spread":    tnx_val - 4.9 if tnx_val else 0,  # approx 10Y - 2Y
         "kospi_momentum": kospi_chg,
     }
 
-    # ?�?� 3. ?�장 ?�도 & ?�단 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # 3. Market temperature & verdict
     temp = calculate_market_temperature(macro, supply_raw)
     verdict, verdict_color = temperature_to_verdict(temp)
 
-    # ?�?� 4. ??메트�?6�??�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # 4. Quick metrics (6 chips)
     def _chg_color(up: bool) -> str:
         return "var(--gr)" if up else "var(--re)"
 
     def _fmt_price(v, decimals=0) -> str:
-        if v is None: return "??
+        if v is None: return "—"
         return f"{v:,.{decimals}f}" if decimals else f"{int(v):,}"
 
     def _fmt_chg(c) -> str:
@@ -104,39 +96,38 @@ async def build_market_response() -> MarketResponse:
     tnx_color = "var(--re)" if tnx_val and tnx_val > 4.5 else "var(--ye)"
 
     quick_metrics = [
-        QuickMetric(label="VIX",    value=f"{vix_val:.1f}", color=vix_color,  sub="공포지??),
-        QuickMetric(label="F&G",    value=str(fg_data["value"]),               color=fg_color,  sub=fg_data["label"]),
-        QuickMetric(label="?�율",   value=_fmt_price(fx_val),                  color=fx_color,  sub="USD/KRW"),
-        QuickMetric(label="금리",   value=f"{tnx_val:.2f}%" if tnx_val else "??, color=tnx_color, sub="미국 10Y"),
-        QuickMetric(label="코스??, value=_fmt_price(kospi_val),               color=_chg_color(kospi_chg >= 0), sub=_fmt_chg(kospi_chg)),
-        QuickMetric(label="S&P",    value=_fmt_price(sp_val.get("price")),     color=_chg_color(sp_val.get("up", True)), sub=_fmt_chg(sp_val.get("change_pct"))),
+        QuickMetric(label="VIX",    value=f"{vix_val:.1f}",                        color=vix_color,  sub="Fear Index"),
+        QuickMetric(label="F&G",    value=str(fg_data["value"]),                    color=fg_color,   sub=fg_data["label"]),
+        QuickMetric(label="FX",     value=_fmt_price(fx_val),                       color=fx_color,   sub="USD/KRW"),
+        QuickMetric(label="Rate",   value=f"{tnx_val:.2f}%" if tnx_val else "—",   color=tnx_color,  sub="US 10Y"),
+        QuickMetric(label="KOSPI",  value=_fmt_price(kospi_val),                    color=_chg_color(kospi_chg >= 0), sub=_fmt_chg(kospi_chg)),
+        QuickMetric(label="S&P",    value=_fmt_price(sp_val.get("price")),          color=_chg_color(sp_val.get("up", True)), sub=_fmt_chg(sp_val.get("change_pct"))),
     ]
 
-    # ?�?� 5. ?�급 ?�이???�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # 5. Supply data
     def _make_actor(key: str, label: str) -> SupplyActor:
         raw = supply_raw.get(key, {})
         return SupplyActor(
             label=label,
-            amount=raw.get("amount", "??),
+            amount=raw.get("amount", "—"),
             direction=raw.get("direction", 0),
             pct=raw.get("pct", 50),
         )
 
-    foreign = _make_actor("foreign", "?�국??)
-    institution = _make_actor("institution", "기�?")
-    individual = _make_actor("individual", "개인")
+    foreign     = _make_actor("foreign",     "Foreign")
+    institution = _make_actor("institution", "Institution")
+    individual  = _make_actor("individual",  "Retail")
 
-    # ?�급 ?�단 문장
     f_dir = supply_raw.get("foreign", {}).get("direction", 0)
     i_dir = supply_raw.get("institution", {}).get("direction", 0)
     if f_dir == -1 and i_dir == -1:
-        supply_judgment = "?�국?�·기관 ?�반 매도 ??개인 ?�수 ???�기 경계 ?�요"
+        supply_judgment = "Foreign + Institution selling — retail absorbing. Short-term caution."
         supply_cls = "var(--ye)"
     elif f_dir == 1 and i_dir == 1:
-        supply_judgment = "?�국?�·기관 ?�반 매수 ??강한 ?�급 ?�호"
+        supply_judgment = "Foreign + Institution buying — strong demand signal."
         supply_cls = "var(--gr)"
     else:
-        supply_judgment = "?�급 ?�조????방향 ?�인 ??진입 권장"
+        supply_judgment = "Mixed flow — confirm direction before entry."
         supply_cls = "var(--t2)"
 
     supply = SupplyData(
@@ -147,19 +138,19 @@ async def build_market_response() -> MarketResponse:
         judgment_cls=supply_cls,
     )
 
-    # ?�?� 6. CTD 체인 (?�장??5?�드) ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # 6. CTD chain (market, 5 nodes)
     ctd_chain = _build_market_ctd(macro, supply_raw, temp)
 
-    # ?�?� 7. ?�장 �?�� ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+    # 7. Market phase
     sp_dd = _calc_drawdown(sp_df)
     phase = _determine_phase(temp, vix_val, sp_dd, fg_data["value"])
 
-    # ?�?� 8. 종목 ?�호 ?�약 (?�시 고정�???종목 ?�비?�에??갱신) ?�?�
+    # 8. Signal summary (temporary fixed values — refreshed by stock service)
     signal_summary = SignalSummary(
         domestic_avg=7.8, domestic_buy=3, domestic_hold=2,
         overseas_avg=8.2, overseas_buy=4, overseas_hold=1,
-        top1_code="000660", top1_name="SK?�이?�스",
-        top1_why="EPS +492% · Fwd P/E 6.5x · HBM ?�점",
+        top1_code="000660", top1_name="SK Hynix",
+        top1_why="EPS +492% · Fwd P/E 6.5x · HBM monopoly",
         top1_score=8.5,
     )
 
@@ -177,7 +168,7 @@ async def build_market_response() -> MarketResponse:
     )
 
 
-# ?�?� ?�퍼 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+# Helpers
 
 def _calc_drawdown(df) -> float:
     if df is None or df.empty:
@@ -190,13 +181,13 @@ def _calc_drawdown(df) -> float:
 
 def _determine_phase(temp: int, vix: float, dd: float, fg: int) -> PhaseData:
     if temp >= 70 and vix < 20:
-        name, color, detail = "강세??, "var(--gr)", f"Drawdown {dd:.1f}% · VIX {vix:.1f}\nEPS ?�장 ?�위 + 모멘?� ?�터 ?�용 �?
+        name, color, detail = "Bull Market", "var(--gr)", f"Drawdown {dd:.1f}% · VIX {vix:.1f}\nEPS growth leaders + momentum filter active"
     elif temp >= 55:
-        name, color, detail = "?�복�?, "var(--ac)", f"VIX {vix:.1f} · 방향???�인 구간"
+        name, color, detail = "Recovery",    "var(--ac)", f"VIX {vix:.1f} · Confirming direction"
     elif temp >= 40:
-        name, color, detail = "조정�?, "var(--ye)", f"VIX {vix:.1f} · 분할 매수 ?�기"
+        name, color, detail = "Correction",  "var(--ye)", f"VIX {vix:.1f} · Accumulation opportunity"
     else:
-        name, color, detail = "?�세??, "var(--re)", f"VIX {vix:.1f} · 리스??관�?최우??
+        name, color, detail = "Bear Market", "var(--re)", f"VIX {vix:.1f} · Risk management first"
     return PhaseData(
         name=name, color=color, detail=detail,
         drawdown_kospi=f"{dd:.1f}%",
@@ -207,14 +198,14 @@ def _determine_phase(temp: int, vix: float, dd: float, fg: int) -> PhaseData:
 
 def _build_summary(temp: int, fg: dict, sp_mom: float) -> str:
     if temp >= 65:
-        return f"EPS ?�장??주�?�??�서??구간?�니?? F&G {fg['value']} ???�욕 경계. 3?�계 분할 매수 권장."
+        return f"EPS growth is outpacing price. F&G {fg['value']} — watch for greed. 3-tranche DCA recommended."
     if temp >= 50:
-        return f"?�장 중립 구간. VIX ?�정?? S&P500 {sp_mom:+.1f}% 모멘?�. 관�???진입 검??"
-    return f"조정 구간 ??분할 매수 기회. F&G {fg['value']}�?공포 ?�세. ?�기 분할 ?�근 권장."
+        return f"Neutral zone. VIX stable, S&P500 {sp_mom:+.1f}% momentum. Monitor before entry."
+    return f"Correction zone — DCA opportunity. F&G {fg['value']} shows fear. Long-term accumulation recommended."
 
 
 def _build_market_ctd(macro: dict, supply: dict, temp: int) -> list[CTDNode]:
-    """?�장 CTD 체인 5?�드 ?�적 ?�성."""
+    """Dynamically build market CTD chain (5 nodes)."""
     fg = macro["fear_greed"]
     vix = macro["vix"]
     sp_mom = macro["sp_momentum"]
@@ -223,64 +214,64 @@ def _build_market_ctd(macro: dict, supply: dict, temp: int) -> list[CTDNode]:
 
     nodes = [
         CTDNode(
-            num="01", text="매크�?n?�경",
+            num="01", text="Macro\nEnv",
             badge="t-core" if rate > 0 else "t-warn",
-            badge_text="?�정" if rate > 0 else "주의",
-            title="매크�??�경 분석",
+            badge_text="Stable" if rate > 0 else "Caution",
+            title="Macro Environment Analysis",
             rows=[
-                CTDRow(text=f"?�단기금리차 {rate:+.2f}% ??{'??�� ?�소' if rate > 0 else '??�� 지??}", tag="?�심", cls="t-core" if rate > 0 else "t-warn"),
-                CTDRow(text=f"미국 10Y 금리 {macro.get('vix',4.45):.2f}% ??고점 ?��??�정??, tag="긍정", cls="t-bull"),
-                CTDRow(text="?�이?�드 ?�프?�드 3.8% ???�용?�기 ?�음", tag="긍정", cls="t-bull"),
+                CTDRow(text=f"Yield spread {rate:+.2f}% — {'inversion resolved' if rate > 0 else 'still inverted'}", tag="Key", cls="t-core" if rate > 0 else "t-warn"),
+                CTDRow(text=f"US 10Y rate stabilizing vs peak", tag="Positive", cls="t-bull"),
+                CTDRow(text="HY spread 3.8% — no credit stress", tag="Positive", cls="t-bull"),
             ],
-            conclusion=f"금리 {'?�정' if rate > -0.5 else '??��'} + ?�프?�드 ?�상????<strong>매크�???�� {'?�소' if rate > 0 else '주시'} 구간</strong>.",
+            conclusion=f"Rate {'stable' if rate > -0.5 else 'inverted'} + spread normalized — <strong>macro headwind {'cleared' if rate > 0 else 'watch'}</strong>.",
         ),
         CTDNode(
-            num="02", text="?�장\n?�리",
+            num="02", text="Market\nSentiment",
             badge="t-warn" if fg > 60 else ("t-bull" if fg < 40 else "t-core"),
-            badge_text="?�욕" if fg > 60 else ("공포" if fg < 40 else "중립"),
-            title="?�장 ?�리 지??,
+            badge_text="Greed" if fg > 60 else ("Fear" if fg < 40 else "Neutral"),
+            title="Market Sentiment Indicators",
             rows=[
-                CTDRow(text=f"VIX {vix:.1f} ??{'공포 ?�음, ?�정?? if vix < 20 else '변?�성 주의'}", tag="긍정" if vix < 20 else "주의", cls="t-bull" if vix < 20 else "t-warn"),
-                CTDRow(text=f"Fear & Greed {fg} ??{'?�욕, 과열 경계' if fg > 65 else ('중립 구간' if fg > 40 else '공포 구간')}", tag="경고" if fg > 65 else "긍정", cls="t-warn" if fg > 65 else "t-bull"),
-                CTDRow(text="Put/Call 비율 0.82 ???��? ?�향 감�?", tag="주의", cls="t-warn"),
+                CTDRow(text=f"VIX {vix:.1f} — {'low fear, stable' if vix < 20 else 'volatility caution'}", tag="Positive" if vix < 20 else "Caution", cls="t-bull" if vix < 20 else "t-warn"),
+                CTDRow(text=f"Fear & Greed {fg} — {'greed, watch for overheating' if fg > 65 else ('neutral zone' if fg > 40 else 'fear zone')}", tag="Warning" if fg > 65 else "Positive", cls="t-warn" if fg > 65 else "t-bull"),
+                CTDRow(text="Put/Call ratio 0.82 — bullish bias detected", tag="Caution", cls="t-warn"),
             ],
-            conclusion=f"?�리 {'과열' if fg > 65 else ('공포' if fg < 35 else '중립')} ?�호 ??<strong>{'분할 ?�근?�로 리스??관�??�요' if fg > 65 else '매수 관???��? 구간'}</strong>.",
+            conclusion=f"Sentiment {'overheated' if fg > 65 else ('fearful' if fg < 35 else 'neutral')} — <strong>{'DCA to manage risk' if fg > 65 else 'buying interest elevated'}</strong>.",
         ),
         CTDNode(
-            num="03", text="?�급\n구조",
+            num="03", text="Supply\nFlow",
             badge="t-risk" if foreign_dir == -1 else "t-bull",
-            badge_text="매도 �? if foreign_dir == -1 else "매수 �?,
-            title="?�급 구조 분석",
+            badge_text="Selling" if foreign_dir == -1 else "Buying",
+            title="Supply/Demand Flow Analysis",
             rows=[
-                CTDRow(text=f"?�국??{supply.get('foreign',{}).get('amount','??)} ??{'차익?�현 진행' if foreign_dir == -1 else '?�매??진입'}", tag="?�험" if foreign_dir == -1 else "긍정", cls="t-risk" if foreign_dir == -1 else "t-bull"),
-                CTDRow(text=f"기�? {supply.get('institution',{}).get('amount','??)}", tag="주의", cls="t-warn"),
-                CTDRow(text=f"개인 {supply.get('individual',{}).get('amount','??)}", tag="?�인", cls="t-hold"),
+                CTDRow(text=f"Foreign {supply.get('foreign',{}).get('amount','—')} — {'profit-taking in progress' if foreign_dir == -1 else 'net inflow'}", tag="Risk" if foreign_dir == -1 else "Positive", cls="t-risk" if foreign_dir == -1 else "t-bull"),
+                CTDRow(text=f"Institution {supply.get('institution',{}).get('amount','—')}", tag="Watch", cls="t-warn"),
+                CTDRow(text=f"Retail {supply.get('individual',{}).get('amount','—')}", tag="Note", cls="t-hold"),
             ],
-            conclusion=f"?�국??{'차익?�현' if foreign_dir == -1 else '?�입'} ??<strong>{'?�기 조정 가?�성 elevated' if foreign_dir == -1 else '?�급 ?�호???�경'}</strong>.",
+            conclusion=f"Foreign {'profit-taking' if foreign_dir == -1 else 'inflow'} — <strong>{'short-term correction risk elevated' if foreign_dir == -1 else 'favorable supply environment'}</strong>.",
         ),
         CTDNode(
-            num="04", text="EPS\n?�장",
+            num="04", text="EPS\nGrowth",
             badge="t-bull",
-            badge_text="강세",
-            title="?�?�멘????EPS ?�장",
+            badge_text="Strong",
+            title="Fundamentals — EPS Growth",
             rows=[
-                CTDRow(text="S&P500 Q1 EPS ?�장�?+12.4% YoY ???�상 ?�회", tag="강세", cls="t-bull"),
-                CTDRow(text="반도체·AI ?�터 EPS ?�장�?+89% ???�도??리더??, tag="최강", cls="t-bull"),
-                CTDRow(text="코스??EPS ?�장 +23% ??AI ?�혜 반도�?견인", tag="강세", cls="t-bull"),
+                CTDRow(text="S&P500 Q1 EPS growth +12.4% YoY — beat expectations", tag="Strong", cls="t-bull"),
+                CTDRow(text="Semi/AI sector EPS growth +89% — dominant leadership", tag="Top", cls="t-bull"),
+                CTDRow(text="KOSPI EPS growth +23% — led by AI-exposed semiconductors", tag="Strong", cls="t-bull"),
             ],
-            conclusion="?�적 기반 ?�승 ?�이????<strong>버블???�닌 ?�?�멘??주도</strong>.",
+            conclusion="Earnings-driven rally — <strong>fundamentals, not bubble</strong>.",
         ),
         CTDNode(
-            num="결론", text="분할\n매수",
+            num="Con", text="DCA\nAction",
             badge="t-act" if temp >= 50 else "t-bull",
-            badge_text="?�동",
-            title="?�자 ?�단 결론",
+            badge_text="Action",
+            title="Investment Decision Conclusion",
             rows=[
-                CTDRow(text=f"?�재 ?�도 {temp} ??{'분할 매수 ?�작 권장' if temp >= 50 else '?�극 매수 구간'}", tag="?�동", cls="t-act"),
-                CTDRow(text="?�급 경고 감안 ?�량 ?�시 매수 금�?", tag="경고", cls="t-warn"),
-                CTDRow(text="1�?조정 -7% 구간?�서 비중 40% 추�?", tag="?�동", cls="t-act"),
+                CTDRow(text=f"Current temp {temp} — {'start DCA tranche 1' if temp >= 50 else 'aggressive accumulation zone'}", tag="Action", cls="t-act"),
+                CTDRow(text="No lump-sum — supply warning active", tag="Warning", cls="t-warn"),
+                CTDRow(text="Add tranche 2 on -7% dip", tag="Action", cls="t-act"),
             ],
-            conclusion=f"{'강세?? if temp >= 60 else '?�복�?} + ?�적 ?�위 ?�인. <strong>?�급 감안 3?�계 분할 ?�행 권장</strong>.",
+            conclusion=f"<strong>{'3-tranche DCA recommended' if temp >= 60 else 'Confirm + enter'}</strong>.",
         ),
     ]
     return nodes

@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter
+from fastapi import APIRouter
 from datetime import datetime, timezone
 
 from providers import yahoo_finance as yf_p
@@ -17,11 +17,11 @@ async def get_ticker():
         return cached
 
     symbols = {
-        "S&P":    INDEX_SYMBOLS["sp500"],
-        "?�스??:  INDEX_SYMBOLS["nasdaq"],
-        "VIX":    INDEX_SYMBOLS["vix"],
-        "WTI":    INDEX_SYMBOLS["wti"],
-        "�?:     "GC=F",
+        "S&P":   INDEX_SYMBOLS["sp500"],
+        "NASDAQ": INDEX_SYMBOLS["nasdaq"],
+        "VIX":   INDEX_SYMBOLS["vix"],
+        "WTI":   INDEX_SYMBOLS["wti"],
+        "Gold":  "GC=F",
     }
 
     prices = yf_p.get_current_prices(list(symbols.values()))
@@ -34,7 +34,7 @@ async def get_ticker():
     fx_v = fx.get("KRW=X", {})
     items.append(TickerItem(label="USD/KRW", value=f"{fx_v.get('price',1380):,.0f}", change=f"{fx_v.get('change_pct',0):+.2f}%", up=fx_v.get("up", True)))
 
-    # ?�후 지?�들
+    # Yahoo Finance indices
     for label, sym in symbols.items():
         d = prices.get(sym, {})
         p = d.get("price")
@@ -43,7 +43,8 @@ async def get_ticker():
             val = f"{p:,.0f}" if p > 100 else f"{p:.1f}"
             items.append(TickerItem(label=label, value=val, change=f"{c:+.2f}%", up=d.get("up", True)))
 
-    # 코스??/ 코스??    for label, key in [("코스??, "kospi"), ("코스??, "kosdaq")]:
+    # KOSPI / KOSDAQ
+    for label, key in [("KOSPI", "kospi"), ("KOSDAQ", "kosdaq")]:
         d = krx_data.get(key, {})
         if d:
             items.append(TickerItem(label=label, value=f"{d['value']:,.0f}", change=f"{d['change_pct']:+.2f}%", up=d["up"]))

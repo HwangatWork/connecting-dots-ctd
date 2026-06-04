@@ -1,5 +1,5 @@
-﻿"""
-커넥?�닷 (CTD) ??FastAPI 백엔??진입??
+"""
+Connecting the Dots (CTD) — FastAPI backend entry point.
 """
 import logging
 from datetime import datetime, timezone
@@ -20,8 +20,8 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 app = FastAPI(
-    title="커넥?�닷 CTD API",
-    description="?�국 개인 ?�자?�용 ?�시�??�자 ?�단 ?�스??,
+    title="CTD API",
+    description="Real-time investment decision system for Korean retail investors",
     version="1.0.0",
 )
 
@@ -33,14 +33,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ?�?� ?�우???�록 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+# Register routers
 PREFIX = settings.api_v1_prefix
 app.include_router(ticker.router, prefix=PREFIX, tags=["ticker"])
 app.include_router(market.router, prefix=PREFIX, tags=["market"])
 app.include_router(stocks.router, prefix=PREFIX, tags=["stocks"])
 
 
-# ?�?� ?�스 체크 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+# Health check
 @app.get("/api/v1/health", response_model=HealthResponse, tags=["system"])
 async def health():
     return HealthResponse(
@@ -56,8 +56,8 @@ async def clear_cache():
     return {"cleared": True}
 
 
-# ?�?� ?�론?�엔???�적 ?�일 ?�빙 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-# API ?�우???�후???�록?�야 /api/* 가 ?�선 처리??@app.get("/", include_in_schema=False)
+# Serve frontend static files — registered after API routes so /api/* takes priority
+@app.get("/", include_in_schema=False)
 async def serve_index():
     return FileResponse(FRONTEND_DIR / "index.html")
 

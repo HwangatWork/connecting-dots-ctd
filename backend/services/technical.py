@@ -1,7 +1,7 @@
 ﻿"""
-기술적 지표 계산 — pandas_ta 기반.
-입력: yfinance OHLCV DataFrame
-출력: 각 지표 값 dict
+Technical indicator calculations.
+Input: yfinance OHLCV DataFrame
+Output: dict of indicator values
 """
 import pandas as pd
 import numpy as np
@@ -78,7 +78,7 @@ def calc_bollinger(df: pd.DataFrame, period: int = 20, std: float = 2.0) -> Opti
 
 
 def calc_momentum(df: pd.DataFrame, days: int = 21) -> Optional[float]:
-    """1개월 모멘텀 (%)."""
+    """1-month momentum (%)."""
     try:
         close = df["Close"].squeeze()
         if len(close) < days + 1:
@@ -90,7 +90,7 @@ def calc_momentum(df: pd.DataFrame, days: int = 21) -> Optional[float]:
 
 
 def calc_all(df: pd.DataFrame) -> dict:
-    """한 번에 모든 기술적 지표 계산."""
+    """Calculate all technical indicators at once."""
     if df is None or df.empty:
         return {}
 
@@ -98,12 +98,12 @@ def calc_all(df: pd.DataFrame) -> dict:
     ma200 = calc_ma(df, 200)
     current_price = float(df["Close"].squeeze().iloc[-1]) if not df.empty else None
 
-    # MA 신호
+    # MA signal
     ma_signal = "neutral"
     if ma50 and ma200:
         ma_signal = "golden" if ma50 > ma200 else "dead"
 
-    # RSI 신호
+    # RSI signal
     rsi = calc_rsi(df)
     rsi_signal = "neutral"
     if rsi:
