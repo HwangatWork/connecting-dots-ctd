@@ -1,37 +1,37 @@
-"""
-IQ 스코어 엔진 — 64개 지표 → 8축 레이더 점수 (0~10).
-각 축은 여러 하위 지표의 가중 평균으로 계산.
+﻿"""
+IQ ?�코???�진 ??64�?지????8�??�이???�수 (0~10).
+�?축�? ?�러 ?�위 지?�의 가�??�균?�로 계산.
 """
 from typing import Optional
 import logging
 
 log = logging.getLogger(__name__)
 
-# 점수 색상 기준
+# ?�수 ?�상 기�?
 def _score_color(v: float) -> str:
     if v >= 8.0: return "#30d158"   # 강세
     if v >= 6.5: return "#0a84ff"   # 중립+
     if v >= 5.0: return "#ffd60a"   # 주의
-    return "#ff453a"                 # 위험
+    return "#ff453a"                 # ?�험
 
 
 def _clamp(v: float, lo=0.0, hi=10.0) -> float:
     return max(lo, min(hi, v))
 
 
-# ── 축별 계산 함수 ────────────────────────────────────────────
+# ?�?� 축별 계산 ?�수 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 
 def score_business_quality(info: dict) -> float:
-    """비즈니스 품질: 매출총이익률, 영업이익률."""
+    """비즈?�스 ?�질: 매출총이?�률, ?�업?�익�?"""
     gm = info.get("grossMargins", 0) or 0
     om = info.get("operatingMargins", 0) or 0
-    # 0~1 범위 → 0~10 점수
+    # 0~1 범위 ??0~10 ?�수
     s = gm * 6 + om * 4
     return _clamp(s * 10, 0, 10)
 
 
 def score_growth_momentum(info: dict, tech: dict) -> float:
-    """성장 모멘텀: EPS YoY, 매출 YoY, 주가 모멘텀."""
+    """?�장 모멘?�: EPS YoY, 매출 YoY, 주�? 모멘?�."""
     eps_growth = info.get("earningsQuarterlyGrowth", 0) or 0  # -1 ~ +inf
     rev_growth = info.get("revenueGrowth", 0) or 0
     momentum = tech.get("momentum_1m", 0) or 0
@@ -44,14 +44,12 @@ def score_growth_momentum(info: dict, tech: dict) -> float:
 
 
 def score_valuation(info: dict) -> float:
-    """밸류에이션: Forward P/E, PEG. 낮을수록 좋음."""
+    """밸류?�이?? Forward P/E, PEG. ??��?�록 좋음."""
     fpe = info.get("forwardPE", None)
     peg = info.get("pegRatio", None)
 
-    s = 5.0  # 기본값
-    if fpe and fpe > 0:
-        # P/E 10 이하 → 9점, 30 이상 → 3점
-        pe_s = _clamp(10 - (fpe - 10) * 0.25, 1, 9)
+    s = 5.0  # 기본�?    if fpe and fpe > 0:
+        # P/E 10 ?�하 ??9?? 30 ?�상 ??3??        pe_s = _clamp(10 - (fpe - 10) * 0.25, 1, 9)
         s = pe_s
     if peg and peg > 0:
         peg_s = _clamp(10 - peg * 2.5, 1, 10)
@@ -61,18 +59,17 @@ def score_valuation(info: dict) -> float:
 
 
 def score_market_timing(tech: dict) -> float:
-    """시장 타이밍: RSI, Stoch RSI, MA 신호."""
+    """?�장 ?�?�밍: RSI, Stoch RSI, MA ?�호."""
     rsi = tech.get("rsi", 50) or 50
     stoch = tech.get("stoch_rsi", 50) or 50
     ma_signal = tech.get("ma_signal", "neutral")
 
-    # RSI: 40~60이 최적 (중립 매수 구간)
+    # RSI: 40~60??최적 (중립 매수 구간)
     if 40 <= rsi <= 60:   rsi_s = 7.0
-    elif 30 <= rsi < 40:  rsi_s = 8.5   # 과매도 = 매수 기회
+    elif 30 <= rsi < 40:  rsi_s = 8.5   # 과매??= 매수 기회
     elif rsi < 30:        rsi_s = 9.5
     elif 60 < rsi <= 70:  rsi_s = 5.5
-    else:                 rsi_s = 3.0   # 과매수
-
+    else:                 rsi_s = 3.0   # 과매??
     # Stoch RSI
     if stoch < 20:        stoch_s = 9.0
     elif stoch < 40:      stoch_s = 7.5
@@ -86,8 +83,8 @@ def score_market_timing(tech: dict) -> float:
 
 
 def score_financial_health(info: dict) -> float:
-    """재무 건전성: 부채비율, Current Ratio, FCF."""
-    de = info.get("debtToEquity", None)        # 낮을수록 좋음
+    """?�무 건전?? 부채비?? Current Ratio, FCF."""
+    de = info.get("debtToEquity", None)        # ??��?�록 좋음
     cr = info.get("currentRatio", None)
     fcf_yield = info.get("freeCashflow", None)
     market_cap = info.get("marketCap", 1) or 1
@@ -107,12 +104,12 @@ def score_financial_health(info: dict) -> float:
 
 
 def score_macro_linkage(info: dict, macro: dict) -> float:
-    """매크로 연계: 섹터 분류 기반 매크로 환경 적합도."""
+    """매크�??�계: ?�터 분류 기반 매크�??�경 ?�합??"""
     sector = (info.get("sector") or "").lower()
     vix = macro.get("vix", 20)
     sp_momentum = macro.get("sp_momentum", 0)
 
-    # AI/테크 섹터는 낮은 금리 + 강세장에서 유리
+    # AI/?�크 ?�터????? 금리 + 강세?�에???�리
     base = 6.0
     if "technology" in sector or "semiconductors" in sector:
         base = 7.5 if sp_momentum > 0 else 5.5
@@ -124,12 +121,12 @@ def score_macro_linkage(info: dict, macro: dict) -> float:
 
 
 def score_risk_management(info: dict, tech: dict, supply: dict) -> float:
-    """리스크 관리: Beta, 변동성, 수급."""
+    """리스??관�? Beta, 변?�성, ?�급."""
     beta = info.get("beta", 1.0) or 1.0
-    # Beta 1.0이 중립 (5점), 높을수록 위험
+    # Beta 1.0??중립 (5??, ?�을?�록 ?�험
     beta_s = _clamp(10 - (beta - 0.5) * 3, 1, 10)
 
-    # 수급: 외국인 매수 방향
+    # ?�급: ?�국??매수 방향
     foreign_dir = 1 if (supply.get("foreign", {}).get("direction", 0) == 1) else -1
     supply_s = 7.0 if foreign_dir > 0 else 4.0
 
@@ -137,16 +134,15 @@ def score_risk_management(info: dict, tech: dict, supply: dict) -> float:
 
 
 def score_after_tax_return(info: dict, is_domestic: bool, target_return: float = 0.3) -> float:
-    """세후 수익률: 목표수익률 대비 세후 기대수익률."""
-    # 국내: 양도세 0%, 해외: 22%
+    """?�후 ?�익�? 목표?�익�??��??�후 기�??�익�?"""
+    # �?��: ?�도??0%, ?�외: 22%
     tax_rate = 0.0 if is_domestic else 0.22
     after_tax = target_return * (1 - tax_rate)
-    # 세후 30% 이상 → 9점, 10% 미만 → 4점
-    s = _clamp(4 + after_tax * 16, 1, 10)
+    # ?�후 30% ?�상 ??9?? 10% 미만 ??4??    s = _clamp(4 + after_tax * 16, 1, 10)
     return round(s, 1)
 
 
-# ── 메인 계산 함수 ────────────────────────────────────────────
+# ?�?� 메인 계산 ?�수 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 
 def calculate_iq_score(
     info: dict,
@@ -156,18 +152,18 @@ def calculate_iq_score(
     is_domestic: bool,
 ) -> dict:
     """
-    8축 IQ 스코어 계산.
+    8�?IQ ?�코??계산.
     Returns: { scores: [8 floats], colors: [8 hex], overall: float }
     """
     axes = {
-        "비즈니스 품질": score_business_quality(info),
-        "성장 모멘텀":   score_growth_momentum(info, tech),
-        "밸류에이션":    score_valuation(info),
-        "시장 타이밍":   score_market_timing(tech),
-        "재무 건전성":   score_financial_health(info),
-        "매크로 연계":   score_macro_linkage(info, macro),
-        "리스크 관리":   score_risk_management(info, tech, supply),
-        "세후 수익률":   score_after_tax_return(info, is_domestic),
+        "비즈?�스 ?�질": score_business_quality(info),
+        "?�장 모멘?�":   score_growth_momentum(info, tech),
+        "밸류?�이??:    score_valuation(info),
+        "?�장 ?�?�밍":   score_market_timing(tech),
+        "?�무 건전??:   score_financial_health(info),
+        "매크�??�계":   score_macro_linkage(info, macro),
+        "리스??관�?:   score_risk_management(info, tech, supply),
+        "?�후 ?�익�?:   score_after_tax_return(info, is_domestic),
     }
 
     scores = list(axes.values())
@@ -185,13 +181,13 @@ def calculate_iq_score(
 
 def calculate_market_temperature(macro: dict, supply: dict) -> int:
     """
-    시장 종합 온도 계산 (0~100).
+    ?�장 종합 ?�도 계산 (0~100).
     """
-    fromconfig import TEMPERATURE_WEIGHTS
+    from config import TEMPERATURE_WEIGHTS
 
     fg = macro.get("fear_greed", 50)
 
-    # VIX → 0~100 점수 (VIX 낮을수록 = 강세)
+    # VIX ??0~100 ?�수 (VIX ??��?�록 = 강세)
     vix = macro.get("vix", 20)
     if vix < 15:   vix_s = 85
     elif vix < 20: vix_s = 72
@@ -199,7 +195,7 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
     elif vix < 30: vix_s = 38
     else:          vix_s = 22
 
-    # S&P500 1개월 모멘텀
+    # S&P500 1개월 모멘?�
     sp_mom = macro.get("sp_momentum", 0)
     if sp_mom > 8:    sp_s = 85
     elif sp_mom > 4:  sp_s = 75
@@ -208,7 +204,7 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
     elif sp_mom > -2: sp_s = 42
     else:             sp_s = 28
 
-    # HY 스프레드 역산 (낮을수록 = 신용 건전)
+    # HY ?�프?�드 ??�� (??��?�록 = ?�용 건전)
     hy = macro.get("hy_spread", 4.0)
     if hy < 3.0:   hy_s = 82
     elif hy < 3.5: hy_s = 72
@@ -216,14 +212,14 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
     elif hy < 5.5: hy_s = 42
     else:          hy_s = 28
 
-    # 장단기 금리차 (양수 = 정상, 음수 = 역전)
+    # ?�단�?금리�?(?�수 = ?�상, ?�수 = ??��)
     spread = macro.get("rate_spread", 0.0)
     if spread > 0.5:   rate_s = 75
     elif spread > 0:   rate_s = 62
     elif spread > -0.5:rate_s = 48
     else:              rate_s = 32
 
-    # 코스피 모멘텀
+    # 코스??모멘?�
     kp_mom = macro.get("kospi_momentum", 0)
     kp_s = 65 + kp_mom * 2
 
@@ -241,9 +237,9 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
 
 
 def temperature_to_verdict(temp: int) -> tuple[str, str]:
-    """온도 → (판단 문장, CSS color var)"""
+    """?�도 ??(?�단 문장, CSS color var)"""
     if temp >= 75: return "과열 주의 구간",   "var(--re)"
     if temp >= 60: return "분할 매수 구간",   "var(--gr)"
-    if temp >= 45: return "중립 관망 구간",   "var(--ac)"
-    if temp >= 30: return "분할 매수 시작",   "var(--ye)"
-    return "적극 매수 구간",                  "var(--gr)"
+    if temp >= 45: return "중립 관�?구간",   "var(--ac)"
+    if temp >= 30: return "분할 매수 ?�작",   "var(--ye)"
+    return "?�극 매수 구간",                  "var(--gr)"

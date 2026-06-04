@@ -1,11 +1,11 @@
-from fastapi import APIRouter
+﻿from fastapi import APIRouter
 from datetime import datetime, timezone
 
-fromproviders import yahoo_finance as yf_p
-fromproviders import krx as krx_p
-fromconfig import INDEX_SYMBOLS, CACHE_TTL
-fromcache import cache
-fromschemas import TickerResponse, TickerItem
+from providers import yahoo_finance as yf_p
+from providers import krx as krx_p
+from config import INDEX_SYMBOLS, CACHE_TTL
+from cache import cache
+from schemas import TickerResponse, TickerItem
 
 router = APIRouter()
 
@@ -18,10 +18,10 @@ async def get_ticker():
 
     symbols = {
         "S&P":    INDEX_SYMBOLS["sp500"],
-        "나스닥":  INDEX_SYMBOLS["nasdaq"],
+        "?�스??:  INDEX_SYMBOLS["nasdaq"],
         "VIX":    INDEX_SYMBOLS["vix"],
         "WTI":    INDEX_SYMBOLS["wti"],
-        "금":     "GC=F",
+        "�?:     "GC=F",
     }
 
     prices = yf_p.get_current_prices(list(symbols.values()))
@@ -34,7 +34,7 @@ async def get_ticker():
     fx_v = fx.get("KRW=X", {})
     items.append(TickerItem(label="USD/KRW", value=f"{fx_v.get('price',1380):,.0f}", change=f"{fx_v.get('change_pct',0):+.2f}%", up=fx_v.get("up", True)))
 
-    # 야후 지수들
+    # ?�후 지?�들
     for label, sym in symbols.items():
         d = prices.get(sym, {})
         p = d.get("price")
@@ -43,8 +43,7 @@ async def get_ticker():
             val = f"{p:,.0f}" if p > 100 else f"{p:.1f}"
             items.append(TickerItem(label=label, value=val, change=f"{c:+.2f}%", up=d.get("up", True)))
 
-    # 코스피 / 코스닥
-    for label, key in [("코스피", "kospi"), ("코스닥", "kosdaq")]:
+    # 코스??/ 코스??    for label, key in [("코스??, "kospi"), ("코스??, "kosdaq")]:
         d = krx_data.get(key, {})
         if d:
             items.append(TickerItem(label=label, value=f"{d['value']:,.0f}", change=f"{d['change_pct']:+.2f}%", up=d["up"]))

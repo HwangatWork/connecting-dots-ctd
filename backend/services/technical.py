@@ -1,4 +1,4 @@
-"""
+﻿"""
 기술적 지표 계산 — pandas_ta 기반.
 입력: yfinance OHLCV DataFrame
 출력: 각 지표 값 dict

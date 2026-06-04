@@ -1,5 +1,5 @@
-"""
-커넥팅닷 (CTD) — FastAPI 백엔드 진입점.
+﻿"""
+커넥?�닷 (CTD) ??FastAPI 백엔??진입??
 """
 import logging
 from datetime import datetime, timezone
@@ -10,18 +10,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-fromconfig import settings
-fromcache import cache
-fromrouters import market, stocks, ticker
-fromschemas import HealthResponse
+from config import settings
+from cache import cache
+from routers import market, stocks, ticker
+from schemas import HealthResponse
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 app = FastAPI(
-    title="커넥팅닷 CTD API",
-    description="한국 개인 투자자용 실시간 투자 판단 시스템",
+    title="커넥?�닷 CTD API",
+    description="?�국 개인 ?�자?�용 ?�시�??�자 ?�단 ?�스??,
     version="1.0.0",
 )
 
@@ -33,14 +33,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── 라우터 등록 ────────────────────────────────────────────────
+# ?�?� ?�우???�록 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 PREFIX = settings.api_v1_prefix
 app.include_router(ticker.router, prefix=PREFIX, tags=["ticker"])
 app.include_router(market.router, prefix=PREFIX, tags=["market"])
 app.include_router(stocks.router, prefix=PREFIX, tags=["stocks"])
 
 
-# ── 헬스 체크 ──────────────────────────────────────────────────
+# ?�?� ?�스 체크 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 @app.get("/api/v1/health", response_model=HealthResponse, tags=["system"])
 async def health():
     return HealthResponse(
@@ -56,9 +56,8 @@ async def clear_cache():
     return {"cleared": True}
 
 
-# ── 프론트엔드 정적 파일 서빙 ──────────────────────────────────
-# API 라우트 이후에 등록해야 /api/* 가 우선 처리됨
-@app.get("/", include_in_schema=False)
+# ?�?� ?�론?�엔???�적 ?�일 ?�빙 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+# API ?�우???�후???�록?�야 /api/* 가 ?�선 처리??@app.get("/", include_in_schema=False)
 async def serve_index():
     return FileResponse(FRONTEND_DIR / "index.html")
 

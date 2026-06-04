@@ -1,4 +1,4 @@
-"""
+﻿"""
 Yahoo Finance provider — yfinance wrapper.
 모든 외부 호출은 여기서만. 실패 시 None 반환 (상위 계층에서 폴백 처리).
 """

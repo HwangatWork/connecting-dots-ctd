@@ -1,4 +1,4 @@
-"""
+﻿"""
 CNN Fear & Greed Index — Alternative.me 무료 API.
 https://api.alternative.me/fng/
 키 불필요, 무료, rate limit 없음.
