@@ -1,0 +1,2257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>커넥팅닷 — CTD Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════ */
+:root {
+  --bg:  #000000;
+  --l1:  #0a0a0a;
+  --l2:  #111113;
+  --l3:  #1a1a1c;
+  --g1:  rgba(255,255,255,.04);
+  --g2:  rgba(255,255,255,.07);
+  --g3:  rgba(255,255,255,.12);
+  --gb:  rgba(255,255,255,.08);
+  --gb2: rgba(255,255,255,.15);
+  --t1:  rgba(255,255,255,1.00);
+  --t2:  rgba(255,255,255,0.62);
+  --t3:  rgba(255,255,255,0.36);
+  --t4:  rgba(255,255,255,0.18);
+  --ac:  #0a84ff;
+  --acd: rgba(10,132,255,.12);
+  --acb: rgba(10,132,255,.25);
+  --gr:  #30d158; --grd: rgba(48,209,88,.10);  --grb: rgba(48,209,88,.22);
+  --ye:  #ffd60a; --yed: rgba(255,214,10,.08);  --yeb: rgba(255,214,10,.20);
+  --re:  #ff453a; --red: rgba(255,69,58,.08);   --reb: rgba(255,69,58,.20);
+  --or:  #ff9f0a; --ord: rgba(255,159,10,.10);
+  --pu:  #bf5af2; --pud: rgba(191,90,242,.12);  --pub: rgba(191,90,242,.25);
+  --font-ui:   'Inter','Noto Sans KR',-apple-system,sans-serif;
+  --font-mono: 'JetBrains Mono',monospace;
+  --f-xs:   11px;
+  --f-sm:   12px;
+  --f-base: 13px;
+  --f-md:   14px;
+  --f-lg:   16px;
+  --f-xl:   28px;
+  --f-hero: 72px;
+  --sp-xs:  6px;
+  --sp-sm:  10px;
+  --sp-md:  16px;
+  --sp-lg:  24px;
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-pill: 9999px;
+  --topbar-h:    44px;
+  --ticker-h:    26px;
+  --bottomnav-h: 56px;
+  --content-top: calc(var(--topbar-h) + var(--ticker-h));
+}
+
+/* ═══════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════ */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { height:100%; -webkit-text-size-adjust:100%; }
+body {
+  background:var(--bg);
+  font-family:var(--font-ui);
+  color:var(--t1);
+  min-height:100%;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.mono { font-family:var(--font-mono); }
+button { font-family:inherit; border:none; background:transparent; cursor:pointer; color:inherit; }
+a { color:inherit; text-decoration:none; }
+
+/* ═══════════════════════════════════
+   TOPBAR
+═══════════════════════════════════ */
+#topbar {
+  position:fixed; top:0; left:0; right:0;
+  height:var(--topbar-h);
+  z-index:200;
+  background:rgba(0,0,0,.88);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:.5px solid var(--gb);
+  display:flex; align-items:center;
+  padding:0 var(--sp-md);
+}
+.tb-logo {
+  font-size:17px; font-weight:800; letter-spacing:-.04em; color:var(--t1);
+}
+.tb-logo span { color:var(--ac); }
+.tb-dot {
+  width:4px; height:4px; border-radius:50%;
+  background:var(--gb2); margin:0 10px;
+  flex-shrink:0;
+}
+.tb-tab-name {
+  font-size:var(--f-base); font-weight:500; color:var(--t2);
+  flex:1;
+}
+.tb-time {
+  font-family:var(--font-mono);
+  font-size:10px; color:var(--t4);
+  letter-spacing:.02em;
+}
+
+/* ═══════════════════════════════════
+   TICKER
+═══════════════════════════════════ */
+#ticker {
+  position:fixed; top:var(--topbar-h); left:0; right:0;
+  height:var(--ticker-h);
+  z-index:190;
+  background:var(--l1);
+  border-bottom:.5px solid var(--gb);
+  overflow:hidden;
+}
+.ticker-track {
+  display:flex; align-items:center;
+  height:100%;
+  white-space:nowrap;
+  animation:ticker-scroll 32s linear infinite;
+}
+.ticker-track:hover { animation-play-state:paused; }
+.ticker-item {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:0 18px;
+  border-right:.5px solid var(--gb);
+  font-family:var(--font-mono);
+  font-size:var(--f-xs);
+  flex-shrink:0;
+}
+.ticker-label { color:var(--t3); }
+.ticker-val { color:var(--t1); font-weight:500; }
+.ticker-chg { }
+.up { color:var(--gr); }
+.dn { color:var(--re); }
+.nt { color:var(--t3); }
+@keyframes ticker-scroll {
+  from { transform:translateX(0); }
+  to   { transform:translateX(-50%); }
+}
+
+/* ═══════════════════════════════════
+   CONTENT AREA
+═══════════════════════════════════ */
+#content {
+  margin-top:var(--content-top);
+  padding-bottom:calc(var(--bottomnav-h) + 8px);
+  min-height:100dvh;
+}
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+
+/* ═══════════════════════════════════
+   BOTTOM NAV
+═══════════════════════════════════ */
+#bottom-nav {
+  position:fixed; bottom:0; left:0; right:0;
+  height:var(--bottomnav-h);
+  z-index:200;
+  background:rgba(10,10,10,.95);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-top:.5px solid var(--gb);
+  display:grid; grid-template-columns:repeat(4,1fr);
+}
+.nav-item {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; cursor:pointer; transition:opacity .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-item .nav-icon { font-size:20px; line-height:1; }
+.nav-item .nav-label {
+  font-size:10px; font-weight:500; color:var(--t3);
+  letter-spacing:-.01em;
+}
+.nav-item.active .nav-label { color:var(--ac); }
+.nav-item.active .nav-icon { filter:drop-shadow(0 0 4px rgba(10,132,255,.6)); }
+
+/* ═══════════════════════════════════
+   BADGE SYSTEM
+═══════════════════════════════════ */
+.badge {
+  display:inline-flex; align-items:center;
+  font-size:10px; font-weight:500;
+  padding:1px 7px; border-radius:4px; border:.5px solid;
+  white-space:nowrap; font-family:var(--font-ui);
+}
+.t-core { background:var(--acd); color:var(--ac);  border-color:var(--acb); }
+.t-bull { background:var(--grd); color:var(--gr);  border-color:var(--grb); }
+.t-warn { background:var(--yed); color:var(--ye);  border-color:var(--yeb); }
+.t-risk { background:var(--red); color:var(--re);  border-color:var(--reb); }
+.t-act  { background:var(--ord); color:var(--or);  border-color:var(--or);  }
+.t-hold { background:var(--g2);  color:var(--t3);  border-color:var(--gb);  }
+.t-pu   { background:var(--pud); color:var(--pu);  border-color:var(--pub); }
+
+/* ═══════════════════════════════════
+   SECTION HEADER
+═══════════════════════════════════ */
+.sec-label {
+  font-size:10px; font-weight:600; color:var(--t4);
+  letter-spacing:.1em; text-transform:uppercase;
+  margin-bottom:12px;
+  display:flex; align-items:center; gap:8px;
+}
+.section-card {
+  margin:0 var(--sp-md) var(--sp-md);
+  background:var(--l2);
+  border:.5px solid var(--gb);
+  border-radius:var(--r-lg);
+  padding:var(--sp-md);
+}
+
+/* ═══════════════════════════════════
+   MARKET TAB — HERO GAUGE
+═══════════════════════════════════ */
+.hero-card {
+  margin:var(--sp-md) var(--sp-md) 0;
+  background:var(--l2);
+  border:.5px solid var(--gb);
+  border-radius:var(--r-lg);
+  padding:20px var(--sp-md) var(--sp-md);
+  display:flex; flex-direction:column; align-items:center;
+}
+.hero-eyebrow {
+  font-size:10px; font-weight:600; color:var(--t4);
+  letter-spacing:.1em; text-transform:uppercase;
+  margin-bottom:12px; align-self:flex-start;
+}
+.gauge-wrap {
+  position:relative; width:100%; max-width:280px;
+  margin:0 auto;
+}
+.gauge-center-text {
+  position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+  text-align:center; pointer-events:none;
+  padding-bottom:4px;
+}
+.gauge-num {
+  font-family:var(--font-mono);
+  font-size:var(--f-hero); font-weight:700;
+  letter-spacing:-.06em; line-height:.9;
+}
+.gauge-sub { font-size:10px; color:var(--t4); margin-top:4px; }
+.hero-verdict {
+  font-size:var(--f-lg); font-weight:700;
+  letter-spacing:-.02em; margin:12px 0 8px;
+}
+.hero-summary {
+  font-size:var(--f-base); font-weight:300; color:var(--t2);
+  line-height:1.7; text-align:center;
+}
+.hero-summary strong { color:var(--t1); font-weight:500; }
+
+/* ═══════════════════════════════════
+   QUICK METRICS CHIPS (2×3)
+═══════════════════════════════════ */
+.metrics-grid {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:6px;
+}
+.metric-chip {
+  background:var(--g1); border:.5px solid var(--gb);
+  border-radius:var(--r-sm); padding:10px 10px;
+  display:flex; flex-direction:column; gap:3px;
+}
+.mc-label { font-size:10px; color:var(--t4); font-weight:500; letter-spacing:.04em; text-transform:uppercase; }
+.mc-val { font-family:var(--font-mono); font-size:var(--f-md); font-weight:600; line-height:1; }
+.mc-sub { font-size:10px; color:var(--t3); }
+
+/* ═══════════════════════════════════
+   CTD HORIZONTAL SCROLL CHAIN
+═══════════════════════════════════ */
+.ctd-chain-outer {
+  position:relative;
+  margin-bottom:0;
+}
+.ctd-chain-wrap {
+  overflow-x:scroll;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to right, black 85%, transparent 100%);
+  mask-image:linear-gradient(to right, black 85%, transparent 100%);
+  padding-bottom:2px;
+}
+.ctd-chain-wrap::-webkit-scrollbar { display:none; }
+.ctd-chain {
+  display:flex; align-items:center;
+  width:max-content;
+  padding:2px var(--sp-md) 2px 0;
+  gap:0;
+}
+.ctd-node {
+  width:112px; flex-shrink:0;
+  scroll-snap-align:start;
+  padding:10px 10px;
+  border-radius:var(--r-md);
+  background:var(--g1);
+  border:.5px solid var(--gb);
+  cursor:pointer;
+  transition:background .15s, border-color .15s;
+  display:flex; flex-direction:column; gap:4px;
+  -webkit-tap-highlight-color:transparent;
+}
+.ctd-node.active {
+  background:var(--acd);
+  border-color:var(--acb);
+}
+.ctd-node-num {
+  font-size:9px; font-weight:600; color:var(--t4);
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.ctd-node.active .ctd-node-num { color:rgba(10,132,255,.55); }
+.ctd-node-text {
+  font-size:11px; font-weight:500; color:var(--t2);
+  line-height:1.35;
+}
+.ctd-node.active .ctd-node-text { color:var(--ac); }
+.ctd-arrow {
+  color:var(--t4); font-size:14px;
+  padding:0 6px; flex-shrink:0;
+  margin-top:-4px;
+}
+.ctd-detail-panel {
+  background:var(--acd); border:.5px solid var(--acb);
+  border-radius:var(--r-md); padding:12px;
+  margin-top:8px;
+}
+.cdp-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+}
+.cdp-num {
+  font-size:10px; font-weight:700; color:var(--ac);
+  background:var(--acb); border-radius:4px;
+  padding:2px 7px; font-family:var(--font-mono);
+}
+.cdp-title { font-size:var(--f-base); font-weight:600; color:var(--t1); }
+.cdp-row {
+  display:flex; align-items:flex-start; gap:6px;
+  padding:4px 0; font-size:var(--f-xs);
+}
+.cdp-arr { color:var(--t4); flex-shrink:0; padding-top:1px; }
+.cdp-text { color:var(--t2); flex:1; line-height:1.5; }
+.cdp-conclusion {
+  margin-top:8px; padding-top:8px;
+  border-top:.5px solid var(--acb);
+  font-size:var(--f-xs); color:var(--t2); line-height:1.6;
+}
+.cdp-conclusion strong { color:var(--ac); font-weight:500; }
+
+/* ═══════════════════════════════════
+   SUPPLY BARS
+═══════════════════════════════════ */
+.supply-row {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:10px;
+}
+.supply-actor { font-size:var(--f-xs); color:var(--t3); width:36px; flex-shrink:0; }
+.supply-track { flex:1; height:5px; background:var(--g2); border-radius:3px; overflow:hidden; }
+.supply-fill { height:5px; border-radius:3px; }
+.supply-amt {
+  font-family:var(--font-mono); font-size:11px; font-weight:500;
+  text-align:right; width:70px; flex-shrink:0;
+}
+.supply-verdict {
+  display:flex; gap:8px; align-items:flex-start;
+  padding:10px 12px; margin-top:4px;
+  border-radius:var(--r-sm);
+  font-size:var(--f-xs); line-height:1.6;
+}
+.supply-verdict strong { font-weight:500; }
+
+/* ═══════════════════════════════════
+   SIGNAL SUMMARY
+═══════════════════════════════════ */
+.signal-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  margin-bottom:10px;
+}
+.signal-col {
+  background:var(--g1); border:.5px solid var(--gb);
+  border-radius:var(--r-md); padding:12px;
+}
+.sig-flag { font-size:18px; margin-bottom:4px; }
+.sig-group { font-size:10px; color:var(--t4); margin-bottom:8px; }
+.sig-score-row { display:flex; align-items:baseline; gap:4px; margin-bottom:6px; }
+.sig-score { font-family:var(--font-mono); font-size:28px; font-weight:700; color:var(--ac); letter-spacing:-.04em; }
+.sig-max { font-size:var(--f-xs); color:var(--t4); }
+.sig-badges { display:flex; gap:5px; flex-wrap:wrap; }
+.top1-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  background:var(--acd); border:.5px solid var(--acb);
+  border-radius:var(--r-md);
+}
+.top1-rank { font-size:10px; font-weight:600; color:var(--ac); flex-shrink:0; }
+.top1-info { flex:1; min-width:0; }
+.top1-name { font-size:var(--f-md); font-weight:500; }
+.top1-why { font-size:10px; color:var(--t3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.top1-score { font-family:var(--font-mono); font-size:18px; font-weight:700; color:var(--ac); flex-shrink:0; }
+
+/* ═══════════════════════════════════
+   STOCKS TAB — CONTEXT BRIDGE
+═══════════════════════════════════ */
+.ctx-bridge {
+  margin:var(--sp-md) var(--sp-md) 0;
+  padding:10px 12px;
+  background:var(--l2); border:.5px solid var(--gb);
+  border-radius:var(--r-md);
+  display:flex; align-items:center; gap:8px;
+  font-size:var(--f-xs);
+}
+.ctx-temp {
+  font-family:var(--font-mono); font-size:18px; font-weight:700;
+  line-height:1; flex-shrink:0;
+}
+.ctx-divider { width:.5px; height:18px; background:var(--gb2); flex-shrink:0; }
+.ctx-label { color:var(--t3); flex-shrink:0; }
+.ctx-link { color:var(--ac); margin-left:auto; flex-shrink:0; cursor:pointer; }
+
+/* ═══════════════════════════════════
+   STOCK CHIPS SCROLL
+═══════════════════════════════════ */
+.chips-header {
+  margin:var(--sp-md) var(--sp-md) 0;
+  display:flex; align-items:center; gap:8px;
+}
+.group-toggle {
+  display:flex; background:var(--g1); border:.5px solid var(--gb);
+  border-radius:var(--r-sm); overflow:hidden; margin-left:auto;
+}
+.group-btn {
+  padding:5px 12px; font-size:11px; font-weight:500;
+  color:var(--t3); transition:all .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.group-btn.active { background:var(--g3); color:var(--t1); }
+.chips-wrap {
+  overflow-x:auto; scrollbar-width:none;
+  padding:10px var(--sp-md) 4px;
+}
+.chips-wrap::-webkit-scrollbar { display:none; }
+.chips-row {
+  display:flex; gap:8px; width:max-content;
+}
+.stock-chip {
+  height:44px; padding:0 14px;
+  border-radius:var(--r-pill);
+  background:var(--g1); border:.5px solid var(--gb);
+  display:flex; align-items:center; gap:7px;
+  white-space:nowrap; cursor:pointer;
+  transition:all .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.stock-chip.active {
+  background:var(--acd); border-color:var(--acb);
+}
+.chip-name { font-size:var(--f-base); font-weight:500; color:var(--t2); }
+.chip-score {
+  font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--t3);
+}
+.stock-chip.active .chip-name { color:var(--ac); }
+.stock-chip.active .chip-score { color:var(--ac); }
+
+/* ═══════════════════════════════════
+   ZONE 4 CARD
+═══════════════════════════════════ */
+.z4-card {
+  margin:8px var(--sp-md) 0;
+  background:var(--l2); border:.5px solid var(--gb);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+}
+.z4-header {
+  padding:16px var(--sp-md) 12px;
+  border-bottom:.5px solid var(--gb);
+}
+.z4-name-row {
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+}
+.z4-name { font-size:var(--f-xl); font-weight:700; letter-spacing:-.04em; }
+.z4-code { font-family:var(--font-mono); font-size:11px; color:var(--t3); }
+.z4-score-pill {
+  margin-left:auto; font-family:var(--font-mono); font-size:13px; font-weight:700;
+  background:var(--ac); color:#000;
+  padding:4px 12px; border-radius:var(--r-pill);
+}
+.z4-price-row { display:flex; align-items:baseline; gap:10px; }
+.z4-price {
+  font-family:var(--font-mono); font-size:32px; font-weight:700;
+  letter-spacing:-.05em;
+}
+.z4-chg { font-size:var(--f-md); font-weight:500; }
+.z4-badges { display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
+.z4-section {
+  padding:14px var(--sp-md);
+  border-bottom:.5px solid var(--gb);
+}
+.z4-section:last-child { border-bottom:none; }
+
+/* ═══════════════════════════════════
+   RADAR CHART
+═══════════════════════════════════ */
+.radar-wrap {
+  display:flex; flex-direction:column; align-items:center;
+}
+.radar-legend {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:6px; width:100%; margin-top:14px;
+}
+.rl-row {
+  display:flex; align-items:center; gap:6px;
+  cursor:pointer; padding:3px 0;
+  -webkit-tap-highlight-color:transparent;
+}
+.rl-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.rl-name { font-size:10px; color:var(--t3); flex:1; }
+.rl-bar { flex:1; height:3px; background:var(--g2); border-radius:2px; overflow:hidden; }
+.rl-fill { height:3px; border-radius:2px; }
+.rl-val { font-family:var(--font-mono); font-size:11px; font-weight:600; width:22px; text-align:right; }
+
+/* ═══════════════════════════════════
+   THESIS VALIDITY
+═══════════════════════════════════ */
+.thesis-row {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 0; border-bottom:.5px solid var(--gb);
+}
+.thesis-row:last-child { border-bottom:none; }
+.th-icon { font-size:14px; flex-shrink:0; }
+.th-body { flex:1; min-width:0; }
+.th-text { font-size:var(--f-base); color:var(--t2); }
+.th-date { font-size:10px; color:var(--t4); margin-top:2px; }
+.th-badge {
+  font-size:10px; font-weight:500; padding:2px 8px;
+  border-radius:4px; border:.5px solid; flex-shrink:0;
+}
+
+/* ═══════════════════════════════════
+   BUY PLAN
+═══════════════════════════════════ */
+.buy-plan-row {
+  display:flex; flex-direction:column; gap:3px;
+  padding:10px 0; border-bottom:.5px solid var(--gb);
+}
+.buy-plan-row:last-child { border-bottom:none; }
+.bp-header { display:flex; align-items:center; gap:8px; }
+.bp-level { font-size:10px; color:var(--t4); font-weight:600; width:44px; flex-shrink:0; }
+.bp-range-track { flex:1; height:6px; background:var(--g2); border-radius:3px; overflow:hidden; position:relative; }
+.bp-range-fill { height:6px; border-radius:3px; position:absolute; }
+.bp-weight {
+  font-family:var(--font-mono); font-size:11px; font-weight:600;
+  width:30px; text-align:right; flex-shrink:0;
+}
+.bp-range-text { font-size:10px; color:var(--t3); margin-left:52px; }
+.bp-targets {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;
+}
+.bp-target-card {
+  padding:10px 12px; border-radius:var(--r-sm);
+  background:var(--g1); border:.5px solid var(--gb);
+}
+.bptc-label { font-size:10px; color:var(--t4); margin-bottom:4px; }
+.bptc-val { font-family:var(--font-mono); font-size:18px; font-weight:700; }
+.after-tax-row {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;
+}
+.atc {
+  padding:10px 12px; border-radius:var(--r-sm);
+  border:.5px solid;
+}
+
+/* ═══════════════════════════════════
+   INVEST TAB
+═══════════════════════════════════ */
+.stats-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+}
+.stat-chip {
+  background:var(--g1); border:.5px solid var(--gb);
+  border-radius:var(--r-md); padding:12px;
+}
+.sc-label { font-size:10px; color:var(--t4); margin-bottom:4px; letter-spacing:.04em; text-transform:uppercase; }
+.sc-val { font-family:var(--font-mono); font-size:22px; font-weight:700; letter-spacing:-.04em; line-height:1; }
+.sc-sub { font-size:10px; color:var(--t3); margin-top:3px; }
+.alloc-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 0; border-bottom:.5px solid var(--gb);
+}
+.alloc-row:last-child { border-bottom:none; }
+.alloc-name { flex:1; font-size:var(--f-base); }
+.alloc-bar { flex:2; height:4px; background:var(--g2); border-radius:2px; overflow:hidden; }
+.alloc-fill { height:4px; border-radius:2px; background:var(--ac); }
+.alloc-pct { font-family:var(--font-mono); font-size:12px; color:var(--t2); width:32px; text-align:right; }
+.tax-calc { }
+.tax-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 0; border-bottom:.5px solid var(--gb);
+}
+.tax-row:last-child { border-bottom:none; }
+.tax-key { font-size:var(--f-sm); color:var(--t3); }
+.tax-val { font-family:var(--font-mono); font-size:var(--f-sm); font-weight:500; }
+.ai-chip {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:6px 12px; border-radius:var(--r-pill);
+  background:var(--acd); border:.5px solid var(--acb);
+  font-size:var(--f-xs); color:var(--ac);
+  cursor:pointer; margin:0 4px 6px 0;
+  -webkit-tap-highlight-color:transparent;
+}
+.ai-input-wrap {
+  display:flex; gap:8px; margin-top:10px;
+}
+.ai-input {
+  flex:1; background:var(--g1); border:.5px solid var(--gb);
+  border-radius:var(--r-md); padding:10px 12px;
+  font-family:var(--font-ui); font-size:var(--f-base); color:var(--t1);
+  outline:none;
+}
+.ai-input::placeholder { color:var(--t4); }
+.ai-input:focus { border-color:var(--acb); background:var(--acd); }
+.ai-send {
+  width:40px; height:40px; border-radius:var(--r-md);
+  background:var(--ac); color:#000; font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+/* ═══════════════════════════════════
+   MORE TAB
+═══════════════════════════════════ */
+.more-row {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 0; border-bottom:.5px solid var(--gb);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.more-row:last-child { border-bottom:none; }
+.more-icon {
+  width:36px; height:36px; border-radius:var(--r-sm);
+  background:var(--g2); display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+}
+.more-info { flex:1; }
+.more-title { font-size:var(--f-base); font-weight:500; }
+.more-sub { font-size:11px; color:var(--t3); margin-top:2px; }
+.more-arrow { color:var(--t4); font-size:14px; }
+.freshness-dot {
+  width:7px; height:7px; border-radius:50%;
+  flex-shrink:0;
+}
+
+/* ═══════════════════════════════════
+   DRILL PANEL (slide up)
+═══════════════════════════════════ */
+.drill-overlay {
+  position:fixed; inset:0; z-index:300;
+  background:rgba(0,0,0,.6);
+  opacity:0; pointer-events:none;
+  transition:opacity .25s;
+}
+.drill-overlay.open { opacity:1; pointer-events:auto; }
+.drill-sheet {
+  position:fixed; bottom:0; left:0; right:0; z-index:301;
+  background:var(--l2);
+  border-top:.5px solid var(--gb);
+  border-radius:20px 20px 0 0;
+  padding:0 var(--sp-md) calc(var(--bottomnav-h) + var(--sp-md));
+  transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  max-height:70dvh; overflow-y:auto;
+}
+.drill-overlay.open .drill-sheet { transform:translateY(0); }
+.drill-handle {
+  width:36px; height:4px; border-radius:2px;
+  background:var(--gb2); margin:12px auto;
+}
+.drill-title { font-size:var(--f-lg); font-weight:700; margin-bottom:14px; }
+.drill-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 0; border-bottom:.5px solid var(--gb);
+  gap:10px;
+}
+.drill-row:last-child { border-bottom:none; }
+.drill-name { font-size:var(--f-sm); color:var(--t2); flex:1; }
+.drill-val { font-family:var(--font-mono); font-size:var(--f-sm); font-weight:600; }
+.drill-sig {
+  font-size:10px; padding:2px 7px; border-radius:4px;
+  border:.5px solid; flex-shrink:0;
+}
+.drill-insight {
+  margin-top:12px; padding:10px 12px;
+  background:var(--acd); border:.5px solid var(--acb);
+  border-radius:var(--r-sm);
+  font-size:var(--f-xs); color:var(--t2); line-height:1.7;
+}
+.drill-insight strong { color:var(--ac); font-weight:500; }
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══ -->
+<div id="topbar">
+  <div class="tb-logo">C<span>T</span>D</div>
+  <div class="tb-dot"></div>
+  <div class="tb-tab-name" id="tb-tab-name">시장</div>
+  <div class="tb-time" id="tb-time">--:--:--</div>
+</div>
+
+<!-- ══ TICKER ══ -->
+<div id="ticker">
+  <div class="ticker-track" id="ticker-track"></div>
+</div>
+
+<!-- ══ CONTENT ══ -->
+<div id="content">
+
+  <!-- ════ 시장 탭 ════ -->
+  <div class="tab-pane active" id="tab-market">
+
+    <!-- Hero Gauge -->
+    <div class="hero-card">
+      <div class="hero-eyebrow">Zone 1A — 시장 체온계</div>
+      <div class="gauge-wrap">
+        <svg id="gauge-svg" viewBox="0 0 280 160" width="100%" style="display:block;max-width:280px;margin:0 auto">
+          <defs>
+            <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ff453a"/>
+              <stop offset="45%" stop-color="#ffd60a"/>
+              <stop offset="100%" stop-color="#30d158"/>
+            </linearGradient>
+          </defs>
+          <!-- track -->
+          <path d="M 24 148 A 116 116 0 0 1 256 148"
+            fill="none" stroke="rgba(255,255,255,.07)" stroke-width="14" stroke-linecap="round"/>
+          <!-- fill — 62% -->
+          <path id="gauge-fill" d="M 24 148 A 116 116 0 0 1 256 148"
+            fill="none" stroke="url(#gauge-grad)" stroke-width="14" stroke-linecap="round"
+            stroke-dasharray="364.4" stroke-dashoffset="138.5"/>
+          <!-- needle -->
+          <line id="gauge-needle" x1="140" y1="148" x2="199" y2="54"
+            stroke="white" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+          <circle cx="140" cy="148" r="6" fill="#000" stroke="white" stroke-width="2.5"/>
+          <!-- labels -->
+          <text x="12" y="164" font-size="10" fill="rgba(255,255,255,.22)" font-family="JetBrains Mono">FEAR</text>
+          <text x="268" y="164" font-size="10" fill="rgba(255,255,255,.22)" font-family="JetBrains Mono" text-anchor="end">GREED</text>
+          <text x="140" y="20" font-size="10" fill="rgba(255,255,255,.22)" font-family="JetBrains Mono" text-anchor="middle">50</text>
+        </svg>
+        <div class="gauge-center-text" style="bottom:14px">
+          <div class="gauge-num" style="color:var(--gr)">62</div>
+          <div class="gauge-sub">종합 시장 온도</div>
+        </div>
+      </div>
+      <div class="hero-verdict" style="color:var(--gr)">분할 매수 구간</div>
+      <div class="hero-summary">
+        <strong>EPS 성장이 주가를 앞서는 구간입니다.</strong> 외국인 차익실현 감지 중 — 한 번에 매수하지 말고 3단계 분할 접근 권장.
+      </div>
+    </div>
+
+    <!-- Quick Metrics -->
+    <div class="section-card" style="margin-top:var(--sp-md)">
+      <div class="sec-label">퀵 메트릭</div>
+      <div class="metrics-grid">
+        <div class="metric-chip">
+          <div class="mc-label">VIX</div>
+          <div class="mc-val" style="color:var(--gr)">18.2</div>
+          <div class="mc-sub">공포 낮음</div>
+        </div>
+        <div class="metric-chip">
+          <div class="mc-label">F&amp;G</div>
+          <div class="mc-val" style="color:var(--ye)">62</div>
+          <div class="mc-sub">탐욕 주의</div>
+        </div>
+        <div class="metric-chip">
+          <div class="mc-label">환율</div>
+          <div class="mc-val" style="color:var(--ye)">1,384</div>
+          <div class="mc-sub">달러/원</div>
+        </div>
+        <div class="metric-chip">
+          <div class="mc-label">금리</div>
+          <div class="mc-val" style="color:var(--ye)">4.45%</div>
+          <div class="mc-sub">미국 10Y</div>
+        </div>
+        <div class="metric-chip">
+          <div class="mc-label">코스피</div>
+          <div class="mc-val" style="color:var(--t2)">2,847</div>
+          <div class="mc-sub">+0.15%</div>
+        </div>
+        <div class="metric-chip">
+          <div class="mc-label">S&amp;P</div>
+          <div class="mc-val" style="color:var(--gr)">5,612</div>
+          <div class="mc-sub">+0.43%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTD Chain -->
+    <div class="section-card">
+      <div class="sec-label">② CTD 인과관계 체인 <span class="badge t-core">시장</span></div>
+      <div class="ctd-chain-outer">
+        <div class="ctd-chain-wrap" id="market-ctd-wrap">
+          <div class="ctd-chain" id="market-ctd-chain">
+            <!-- JS로 렌더 -->
+          </div>
+        </div>
+        <div class="ctd-detail-panel" id="market-ctd-detail">
+          <div class="cdp-header">
+            <div class="cdp-num" id="mctd-num">01</div>
+            <div class="cdp-title" id="mctd-title">—</div>
+          </div>
+          <div id="mctd-rows"></div>
+          <div class="cdp-conclusion" id="mctd-conclusion"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supply -->
+    <div class="section-card">
+      <div class="sec-label">Zone 1B — 수급 구조 <span class="badge t-warn">1개월</span></div>
+      <div class="supply-row">
+        <div class="supply-actor">외국인</div>
+        <div class="supply-track"><div class="supply-fill" style="width:74%;background:var(--re)"></div></div>
+        <div class="supply-amt" style="color:var(--re)">-23,400억</div>
+      </div>
+      <div class="supply-row">
+        <div class="supply-actor">기관</div>
+        <div class="supply-track"><div class="supply-fill" style="width:28%;background:var(--re)"></div></div>
+        <div class="supply-amt" style="color:var(--re)">-8,700억</div>
+      </div>
+      <div class="supply-row">
+        <div class="supply-actor">개인</div>
+        <div class="supply-track"><div class="supply-fill" style="width:100%;background:var(--gr)"></div></div>
+        <div class="supply-amt" style="color:var(--gr)">+31,200억</div>
+      </div>
+      <div class="supply-verdict" style="background:var(--yed);border:.5px solid var(--yeb)">
+        <span>⚠</span>
+        <div style="color:var(--t2)"><strong style="color:var(--ye)">기관·외국인 동반 매도 → 개인 흡수</strong> — 역사적 위험 신호. 분할 접근 권장.</div>
+      </div>
+    </div>
+
+    <!-- Signal Summary -->
+    <div class="section-card">
+      <div class="sec-label">Zone 1C — 종목 신호 요약</div>
+      <div class="signal-grid">
+        <div class="signal-col">
+          <div class="sig-flag">🇰🇷</div>
+          <div class="sig-group">국내 Top 5 평균</div>
+          <div class="sig-score-row">
+            <div class="sig-score">7.8</div>
+            <div class="sig-max">/ 10</div>
+          </div>
+          <div class="sig-badges">
+            <span class="badge t-bull">매수 3</span>
+            <span class="badge t-hold">관망 2</span>
+          </div>
+        </div>
+        <div class="signal-col">
+          <div class="sig-flag">🌐</div>
+          <div class="sig-group">해외 Top 5 평균</div>
+          <div class="sig-score-row">
+            <div class="sig-score">8.2</div>
+            <div class="sig-max">/ 10</div>
+          </div>
+          <div class="sig-badges">
+            <span class="badge t-bull">매수 4</span>
+            <span class="badge t-hold">관망 1</span>
+          </div>
+        </div>
+      </div>
+      <div class="top1-row">
+        <div class="top1-rank">#1</div>
+        <div class="top1-info">
+          <div class="top1-name">SK하이닉스</div>
+          <div class="top1-why">EPS +492% · Fwd P/E 6.5x · HBM 독점</div>
+        </div>
+        <div class="top1-score">8.5</div>
+      </div>
+    </div>
+
+    <!-- Phase -->
+    <div class="section-card">
+      <div class="sec-label">시장 국면</div>
+      <div style="text-align:center;padding:12px 0 8px">
+        <div style="font-size:10px;color:var(--t4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">현재 국면</div>
+        <div style="font-size:32px;font-weight:700;color:var(--gr);letter-spacing:-.03em;margin-bottom:6px">강세장</div>
+        <div style="font-size:12px;color:var(--t3);line-height:1.7">Drawdown 3.1% · VIX 18.2<br>EPS 성장 상위 + 모멘텀 필터 적용 중</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gb);border-radius:var(--r-sm);overflow:hidden;margin-top:8px">
+        <div style="background:var(--l2);padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t4);margin-bottom:4px">코스피 DD</div>
+          <div class="mono" style="font-size:16px;font-weight:600;color:var(--gr)">-3.1%</div>
+        </div>
+        <div style="background:var(--l2);padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t4);margin-bottom:4px">나스닥 DD</div>
+          <div class="mono" style="font-size:16px;font-weight:600;color:var(--gr)">-2.8%</div>
+        </div>
+        <div style="background:var(--l2);padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t4);margin-bottom:4px">F&amp;G</div>
+          <div class="mono" style="font-size:16px;font-weight:600;color:var(--ye)">62</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-market -->
+
+  <!-- ════ 종목 탭 ════ -->
+  <div class="tab-pane" id="tab-stocks">
+
+    <!-- Context Bridge -->
+    <div class="ctx-bridge">
+      <div class="ctx-temp" style="color:var(--gr)">62</div>
+      <div class="ctx-divider"></div>
+      <div class="ctx-label">강세장 국면</div>
+      <span class="badge t-bull">분할 매수</span>
+      <div class="ctx-link" onclick="switchTab('market')">CTD 근거 →</div>
+    </div>
+
+    <!-- Stock Chips -->
+    <div class="chips-header">
+      <div class="sec-label" style="margin-bottom:0">종목 선택</div>
+      <div class="group-toggle">
+        <button class="group-btn active" id="btn-domestic" onclick="setGroup('domestic')">🇰🇷 국내</button>
+        <button class="group-btn" id="btn-overseas" onclick="setGroup('overseas')">🌐 해외</button>
+      </div>
+    </div>
+    <div class="chips-wrap">
+      <div class="chips-row" id="chips-row"></div>
+    </div>
+
+    <!-- Zone 4 -->
+    <div class="z4-card" id="z4-card">
+      <!-- JS로 렌더 -->
+    </div>
+
+  </div><!-- /tab-stocks -->
+
+  <!-- ════ 투자 탭 ════ -->
+  <div class="tab-pane" id="tab-invest">
+
+    <!-- Portfolio Stats -->
+    <div class="section-card" style="margin-top:var(--sp-md)">
+      <div class="sec-label">포트폴리오 통계</div>
+      <div class="stats-grid">
+        <div class="stat-chip">
+          <div class="sc-label">총 평가액</div>
+          <div class="sc-val" style="color:var(--t1)">₩38.4M</div>
+          <div class="sc-sub" style="color:var(--gr)">+12.3% 총 수익</div>
+        </div>
+        <div class="stat-chip">
+          <div class="sc-label">세후 순이익</div>
+          <div class="sc-val" style="color:var(--gr)">+₩4.2M</div>
+          <div class="sc-sub">국내 세금 0%</div>
+        </div>
+        <div class="stat-chip">
+          <div class="sc-label">국내 비중</div>
+          <div class="sc-val" style="color:var(--ac)">68%</div>
+          <div class="sc-sub">양도세 비과세</div>
+        </div>
+        <div class="stat-chip">
+          <div class="sc-label">해외 비중</div>
+          <div class="sc-val" style="color:var(--ye)">32%</div>
+          <div class="sc-sub">세금 22% 적용</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portfolio Allocation -->
+    <div class="section-card">
+      <div class="sec-label">포트폴리오 배분</div>
+      <div class="alloc-row">
+        <div class="alloc-name">SK하이닉스 <span class="badge t-bull" style="margin-left:4px">세후=세전</span></div>
+        <div class="alloc-bar"><div class="alloc-fill" style="width:32%"></div></div>
+        <div class="alloc-pct">32%</div>
+      </div>
+      <div class="alloc-row">
+        <div class="alloc-name">삼성전자 <span class="badge t-bull" style="margin-left:4px">세후=세전</span></div>
+        <div class="alloc-bar"><div class="alloc-fill" style="width:22%"></div></div>
+        <div class="alloc-pct">22%</div>
+      </div>
+      <div class="alloc-row">
+        <div class="alloc-name">NVDA <span class="badge t-risk" style="margin-left:4px">세금 22%</span></div>
+        <div class="alloc-bar"><div class="alloc-fill" style="width:18%"></div></div>
+        <div class="alloc-pct">18%</div>
+      </div>
+      <div class="alloc-row">
+        <div class="alloc-name">한화에어로 <span class="badge t-bull" style="margin-left:4px">세후=세전</span></div>
+        <div class="alloc-bar"><div class="alloc-fill" style="width:14%"></div></div>
+        <div class="alloc-pct">14%</div>
+      </div>
+      <div class="alloc-row">
+        <div class="alloc-name">TSMC <span class="badge t-risk" style="margin-left:4px">세금 22%</span></div>
+        <div class="alloc-bar"><div class="alloc-fill" style="width:14%"></div></div>
+        <div class="alloc-pct">14%</div>
+      </div>
+    </div>
+
+    <!-- Tax Calculator -->
+    <div class="section-card">
+      <div class="sec-label">세금 계산기</div>
+      <div class="tax-calc">
+        <div class="tax-row">
+          <div class="tax-key">매수가</div>
+          <div class="tax-val mono">₩150,000</div>
+        </div>
+        <div class="tax-row">
+          <div class="tax-key">매도가 (예상)</div>
+          <div class="tax-val mono">₩214,500</div>
+        </div>
+        <div class="tax-row">
+          <div class="tax-key">수량</div>
+          <div class="tax-val mono">100주</div>
+        </div>
+        <div class="tax-row">
+          <div class="tax-key">세전 수익</div>
+          <div class="tax-val mono" style="color:var(--gr)">+₩6,450,000</div>
+        </div>
+        <div class="tax-row">
+          <div class="tax-key">양도소득세 (국내)</div>
+          <div class="tax-val mono" style="color:var(--gr)">₩0 (비과세)</div>
+        </div>
+        <div class="tax-row" style="border-bottom:none">
+          <div class="tax-key" style="font-weight:600;color:var(--t1)">세후 순이익</div>
+          <div class="tax-val mono" style="color:var(--gr);font-size:16px">+₩6,450,000</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="section-card">
+      <div class="sec-label">AI 투자 분석</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0;margin-bottom:4px">
+        <button class="ai-chip">📊 현재 포트폴리오 분석</button>
+        <button class="ai-chip">💰 세금 최적화 전략</button>
+        <button class="ai-chip">📈 리밸런싱 시점</button>
+      </div>
+      <div class="ai-input-wrap">
+        <input class="ai-input" type="text" placeholder="포트폴리오에 대해 질문하세요...">
+        <button class="ai-send">↑</button>
+      </div>
+    </div>
+
+  </div><!-- /tab-invest -->
+
+  <!-- ════ 더보기 탭 ════ -->
+  <div class="tab-pane" id="tab-more">
+
+    <div class="section-card" style="margin-top:var(--sp-md)">
+      <div class="sec-label">데이터 신선도</div>
+      <div class="more-row">
+        <div class="more-icon">📡</div>
+        <div class="more-info">
+          <div class="more-title">시장 지수</div>
+          <div class="more-sub">마지막 갱신: 2026.06.04 15:30 KST</div>
+        </div>
+        <div class="freshness-dot" style="background:var(--gr)"></div>
+      </div>
+      <div class="more-row">
+        <div class="more-icon">📊</div>
+        <div class="more-info">
+          <div class="more-title">매크로 지표</div>
+          <div class="more-sub">마지막 갱신: 2026.06.04 09:00 KST</div>
+        </div>
+        <div class="freshness-dot" style="background:var(--gr)"></div>
+      </div>
+      <div class="more-row">
+        <div class="more-icon">🧠</div>
+        <div class="more-info">
+          <div class="more-title">종목 AI 스코어</div>
+          <div class="more-sub">마지막 갱신: 2026.06.04 08:00 KST</div>
+        </div>
+        <div class="freshness-dot" style="background:var(--ye)"></div>
+      </div>
+      <div class="more-row" style="border-bottom:none">
+        <div class="more-icon">💹</div>
+        <div class="more-info">
+          <div class="more-title">수급 데이터</div>
+          <div class="more-sub">마지막 갱신: 2026.06.04 15:30 KST</div>
+        </div>
+        <div class="freshness-dot" style="background:var(--gr)"></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="sec-label">알림 설정</div>
+      <div class="more-row">
+        <div class="more-icon">🌡️</div>
+        <div class="more-info">
+          <div class="more-title">시장 온도 알림</div>
+          <div class="more-sub">온도 ≤40 또는 ≥80 시 푸시</div>
+        </div>
+        <div style="width:40px;height:24px;border-radius:12px;background:var(--ac);position:relative;cursor:pointer">
+          <div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;right:2px;transition:.2s"></div>
+        </div>
+      </div>
+      <div class="more-row" style="border-bottom:none">
+        <div class="more-icon">📉</div>
+        <div class="more-info">
+          <div class="more-title">손절 경고 알림</div>
+          <div class="more-sub">보유 종목 -7% 이하 시 즉시 알림</div>
+        </div>
+        <div style="width:40px;height:24px;border-radius:12px;background:var(--ac);position:relative;cursor:pointer">
+          <div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;right:2px;transition:.2s"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="sec-label">앱 정보</div>
+      <div class="more-row">
+        <div class="more-icon">ℹ️</div>
+        <div class="more-info">
+          <div class="more-title">커넥팅닷 CTD</div>
+          <div class="more-sub">v1.0.0 · Mobile Web App</div>
+        </div>
+        <div class="more-arrow">›</div>
+      </div>
+      <div class="more-row">
+        <div class="more-icon">📜</div>
+        <div class="more-info">
+          <div class="more-title">면책 고지</div>
+          <div class="more-sub">본 서비스는 투자 참고용입니다</div>
+        </div>
+        <div class="more-arrow">›</div>
+      </div>
+      <div class="more-row" style="border-bottom:none">
+        <div class="more-icon">🔒</div>
+        <div class="more-info">
+          <div class="more-title">개인정보 처리방침</div>
+          <div class="more-sub">데이터는 기기에만 저장됩니다</div>
+        </div>
+        <div class="more-arrow">›</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-more -->
+
+</div><!-- /content -->
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav id="bottom-nav">
+  <button class="nav-item active" id="nav-market" onclick="switchTab('market')">
+    <span class="nav-icon">🌡️</span>
+    <span class="nav-label">시장</span>
+  </button>
+  <button class="nav-item" id="nav-stocks" onclick="switchTab('stocks')">
+    <span class="nav-icon">◎</span>
+    <span class="nav-label">종목</span>
+  </button>
+  <button class="nav-item" id="nav-invest" onclick="switchTab('invest')">
+    <span class="nav-icon">◈</span>
+    <span class="nav-label">투자</span>
+  </button>
+  <button class="nav-item" id="nav-more" onclick="switchTab('more')">
+    <span class="nav-icon">⋯</span>
+    <span class="nav-label">더보기</span>
+  </button>
+</nav>
+
+<!-- ══ DRILL OVERLAY ══ -->
+<div class="drill-overlay" id="drill-overlay" onclick="closeDrill()">
+  <div class="drill-sheet" id="drill-sheet" onclick="event.stopPropagation()">
+    <div class="drill-handle"></div>
+    <div class="drill-title" id="drill-title"></div>
+    <div id="drill-rows"></div>
+    <div class="drill-insight" id="drill-insight"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════
+   API CONFIG
+═══════════════════════════════════ */
+// 상대경로 사용 → PC/폰/배포 환경 모두 자동 대응
+const API_BASE = (typeof CTD_API_BASE !== 'undefined' ? CTD_API_BASE : '')
+  || (window.location.protocol !== 'file:' ? '/api/v1' : 'http://localhost:8000/api/v1');
+
+async function apiFetch(path, fallback = null) {
+  try {
+    const r = await fetch(API_BASE + path);
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  } catch (e) {
+    console.warn('[CTD API]', path, e.message);
+    return fallback;
+  }
+}
+
+function showLoading(elId, msg = '데이터 로딩 중…') {
+  const el = document.getElementById(elId);
+  if (el) el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--t4);font-size:13px">${msg}</div>`;
+}
+
+function showError(elId, msg = '데이터를 불러올 수 없습니다') {
+  const el = document.getElementById(elId);
+  if (el) el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--re);font-size:12px">⚠ ${msg}</div>`;
+}
+
+/* ═══════════════════════════════════
+   MOCK FALLBACK DATA (API 실패 시)
+═══════════════════════════════════ */
+const MOCK_TICKER = [
+  { label:'S&P',    value:'5,612', change:'+0.43%', up:true  },
+  { label:'코스피', value:'2,847', change:'-0.21%', up:false },
+  { label:'VIX',    value:'18.2',  change:'-1.2',   up:false },
+  { label:'USD/KRW',value:'1,384', change:'+2.1',   up:false },
+  { label:'나스닥', value:'19,823',change:'+0.61%', up:true  },
+  { label:'코스닥', value:'812',   change:'+0.15%', up:true  },
+  { label:'닛케이', value:'39,420',change:'+0.28%', up:true  },
+  { label:'WTI',    value:'78.4',  change:'-0.8%',  up:false },
+  { label:'금',     value:'2,341', change:'+0.12%', up:true  },
+];
+
+// 티커 데이터 (API 응답 or 목업)
+let TICKER_DATA = MOCK_TICKER;
+
+const MARKET_CTD = [
+  {
+    num:'01', text:'매크로\n환경', badge:'t-core', badgeText:'핵심',
+    title:'매크로 환경 분석',
+    rows:[
+      {t:'미국 10년물 금리 4.45% — 고점 대비 안정화', tag:'안정', cls:'t-bull'},
+      {t:'장단기 금리차 역전 해소 → 경기침체 리스크 완화', tag:'핵심', cls:'t-core'},
+      {t:'하이일드 스프레드 3.8% — 신용위기 없음', tag:'긍정', cls:'t-bull'},
+    ],
+    conc:'금리 안정 + 스프레드 정상화 — <strong>매크로 역풍 해소 구간</strong>.'
+  },
+  {
+    num:'02', text:'시장\n심리', badge:'t-warn', badgeText:'주의',
+    title:'시장 심리 지표',
+    rows:[
+      {t:'VIX 18.2 — 공포 없음, 안정적 시장', tag:'긍정', cls:'t-bull'},
+      {t:'F&G 62 — 탐욕 구간 진입, 과열 경계 필요', tag:'경고', cls:'t-warn'},
+      {t:'Put/Call 비율 0.82 — 낙관 편향 감지', tag:'주의', cls:'t-warn'},
+    ],
+    conc:'심리 과열 신호 감지 — <strong>분할 접근으로 리스크 관리 필요</strong>.'
+  },
+  {
+    num:'03', text:'수급\n구조', badge:'t-warn', badgeText:'경고',
+    title:'수급 구조 분석',
+    rows:[
+      {t:'외국인 -23,400억 — 대규모 차익실현 진행 중', tag:'위험', cls:'t-risk'},
+      {t:'기관 -8,700억 — 동반 매도 신호', tag:'위험', cls:'t-risk'},
+      {t:'개인 +31,200억 — 역사적 고점 흡수 패턴', tag:'경고', cls:'t-warn'},
+    ],
+    conc:'외국인·기관 동반 매도 + 개인 흡수 — <strong>단기 조정 가능성 elevated</strong>.'
+  },
+  {
+    num:'04', text:'EPS\n성장', badge:'t-bull', badgeText:'강세',
+    title:'펀더멘털 — EPS 성장',
+    rows:[
+      {t:'S&P500 Q1 EPS 성장률 +12.4% YoY — 예상 상회', tag:'강세', cls:'t-bull'},
+      {t:'반도체·AI 섹터 EPS 성장률 +89% — 압도적 리더십', tag:'최강', cls:'t-bull'},
+      {t:'코스피 EPS 성장 +23% — AI 수혜 반도체 견인', tag:'강세', cls:'t-bull'},
+    ],
+    conc:'실적 기반 상승 사이클 — <strong>버블이 아닌 펀더멘털 주도</strong>.'
+  },
+  {
+    num:'결론', text:'분할\n매수', badge:'t-act', badgeText:'행동',
+    title:'투자 판단 결론',
+    rows:[
+      {t:'현재 구간: 비중 30% 분할 시작 권장', tag:'행동', cls:'t-act'},
+      {t:'수급 경고로 전량 매수 금지 — 단계적 접근', tag:'경고', cls:'t-warn'},
+      {t:'1차 조정 -7% 구간에서 비중 40% 추가', tag:'행동', cls:'t-act'},
+    ],
+    conc:'강세장 + 실적 우위 확인. <strong>수급 경고 감안 3단계 분할 실행 권장</strong>.'
+  },
+];
+
+const STOCKS = {
+  domestic: [
+    {
+      code:'000660', name:'SK하이닉스', price:'₩214,500', change:'+2.3%', up:true,
+      score:8.5,
+      strengths:['성장 모멘텀','재무 건전성'],
+      weaknesses:['시장 타이밍'],
+      radarScores:[8.2, 9.1, 7.8, 5.5, 8.8, 8.0, 7.2, 8.5],
+      radarColors:['#0a84ff','#30d158','#ffd60a','#ff453a','#30d158','#0a84ff','#ffd60a','#30d158'],
+      ctd:[
+        {num:'01',text:'AI\nCapEx',badge:'t-core',badgeText:'핵심',title:'AI CapEx $700B+ 배경',rows:[{t:'빅테크 AI 인프라 투자 $700B+ 확정',tag:'핵심',cls:'t-core'},{t:'NVDA·AMD 칩 수요 — HBM 직접 수혜',tag:'강세',cls:'t-bull'},{t:'CapEx 전년比 40%+ 증가세 지속',tag:'강세',cls:'t-bull'}],conc:'AI 투자 사이클 <strong>구조적 상승기</strong> 진입.'},
+        {num:'02',text:'HBM\n공급',badge:'t-core',badgeText:'핵심',title:'HBM 공급 부족 구조',rows:[{t:'HBM 생산 3사만 가능 — 공급 제한',tag:'핵심',cls:'t-core'},{t:'2028년까지 수요 > 공급 구조 확정',tag:'핵심',cls:'t-core'},{t:'SK하이닉스 HBM3E 점유율 50%+ 독점',tag:'강세',cls:'t-bull'}],conc:'공급 과잉 불가. <strong>가격 결정력 완전 보유</strong>.'},
+        {num:'03',text:'EPS\n+492%',badge:'t-bull',badgeText:'우호',title:'EPS +492% 실적',rows:[{t:'EPS GAAP YoY +492% — 반도체 1위',tag:'최상위',cls:'t-bull'},{t:'매출 YoY +62% — AI 서버 수요 직결',tag:'강세',cls:'t-bull'},{t:'Gross Margin 56.3% — HBM 프리미엄',tag:'개선',cls:'t-bull'}],conc:'EPS 성장이 주가를 <strong>크게 앞서는 구간</strong>.'},
+        {num:'04',text:'P/E\n6.5x',badge:'t-bull',badgeText:'저평가',title:'Fwd P/E 6.5x 저평가',rows:[{t:'Fwd P/E 6.5x — HBM 반도체 글로벌 최저',tag:'극저평가',cls:'t-bull'},{t:'PEG 0.42 — 성장 대비 극단적 저평가',tag:'저평가',cls:'t-bull'},{t:'DCF 내재가치 ₩280만 — 34% 업사이드',tag:'우호',cls:'t-bull'}],conc:'EPS +492%인데 P/E 6.5x. <strong>시장이 아직 미반영</strong>.'},
+        {num:'결론',text:'분할\n매수',badge:'t-act',badgeText:'행동',title:'분할 매수 실행',rows:[{t:'현재 ₩200~240만 — 비중 30% 시작',tag:'행동',cls:'t-act'},{t:'1차 조정 ₩170~200만 — 40% 적극 매수',tag:'행동',cls:'t-act'},{t:'Stoch RSI 82 과열 — 한번에 전량 금지',tag:'경고',cls:'t-warn'}],conc:'강세장 + EPS 우위. <strong>3단계 분할 실행 권장</strong>.'},
+      ],
+      validity:[
+        {icon:'✅',text:'HBM 공급 부족 2028년까지',date:'2026.05.28 확인',status:'유효',cls:'t-bull'},
+        {icon:'✅',text:'EPS +492% > 주가 상승률',date:'2026.06.01 확인',status:'유효',cls:'t-bull'},
+        {icon:'⚠️',text:'외국인 대규모 매도 진행 중',date:'2026.06.03 갱신',status:'경고',cls:'t-warn'},
+        {icon:'⚠️',text:'Stoch RSI 82 — 단기 과열',date:'2026.06.03 갱신',status:'경고',cls:'t-warn'},
+      ],
+      buyPlan:{
+        current:{label:'현재 구간',range:'₩200~240만',weight:'30%',color:'var(--ac)',fill:50},
+        dip1:{label:'1차 조정',range:'₩170~200만',weight:'40%',color:'var(--gr)',fill:72},
+        dip2:{label:'2차 조정',range:'₩130~170만',weight:'30%',color:'var(--ye)',fill:100},
+        target:'₩380만',stopLoss:'₩160만',
+        afterTax:{domestic:{ret:'+77%',label:'국내 세후',color:'var(--gr)',taxNote:'양도세 0%'},overseas:{ret:'+60%',label:'해외 22% 가정',color:'var(--ye)',taxNote:'세금 20%후'}}
+      },
+      drill:{
+        '비즈니스 품질':{title:'비즈니스 품질 상세',rows:[{n:'HBM 시장 지배력',v:'독점적',c:'#30d158',s:'최상위'},{n:'기술 해자',v:'HBM3E 선도',c:'#0a84ff',s:'핵심'},{n:'고객 락인',v:'NVDA 장기계약',c:'#30d158',s:'강세'}],insight:'HBM3E 독점 + NVDA 전략적 파트너십 — <strong>해자 최고 등급</strong>.'},
+        '성장 모멘텀':{title:'성장 모멘텀 상세',rows:[{n:'EPS YoY',v:'+492%',c:'#30d158',s:'압도적'},{n:'매출 YoY',v:'+62%',c:'#30d158',s:'강세'},{n:'CapEx 가이던스',v:'유지',c:'#0a84ff',s:'긍정'}],insight:'AI 사이클 수혜 — <strong>성장 가시성 2028년까지 확보</strong>.'},
+        '밸류에이션':{title:'밸류에이션 상세',rows:[{n:'Fwd P/E',v:'6.5x',c:'#30d158',s:'극저평가'},{n:'PEG',v:'0.42',c:'#30d158',s:'저평가'},{n:'EV/EBITDA',v:'4.8x',c:'#30d158',s:'매력적'}],insight:'성장 대비 극단적 저평가 — <strong>P/E 확장 여지 충분</strong>.'},
+        '시장 타이밍':{title:'시장 타이밍 상세',rows:[{n:'RSI(14)',v:'72',c:'#ffd60a',s:'과열 경계'},{n:'Stoch RSI',v:'82',c:'#ff453a',s:'과열'},{n:'MA50 이격',v:'+8.2%',c:'#ffd60a',s:'주의'}],insight:'단기 기술적 과열 — <strong>분할 매수로 타이밍 리스크 분산 필요</strong>.'},
+        '재무 건전성':{title:'재무 건전성 상세',rows:[{n:'FCF',v:'+12.4조',c:'#30d158',s:'강건'},{n:'부채비율',v:'38%',c:'#30d158',s:'안전'},{n:'현금성자산',v:'18.2조',c:'#0a84ff',s:'우수'}],insight:'FCF 폭발적 증가 + 낮은 부채 — <strong>재무 위기 가능성 0%</strong>.'},
+        '매크로 연계':{title:'매크로 연계 상세',rows:[{n:'AI CapEx 민감도',v:'직접 수혜',c:'#0a84ff',s:'핵심'},{n:'환율 영향',v:'달러 수익',c:'#30d158',s:'긍정'},{n:'금리 민감도',v:'낮음',c:'#30d158',s:'안전'}],insight:'AI 사이클 + 달러 강세 동시 수혜 — <strong>매크로 리스크 최소화</strong>.'},
+        '리스크 관리':{title:'리스크 관리 상세',rows:[{n:'Beta',v:'1.45',c:'#ffd60a',s:'고변동성'},{n:'SKEW',v:'테일리스크',c:'#ffd60a',s:'감지중'},{n:'외국인 동향',v:'매도 중',c:'#ff453a',s:'경고'}],insight:'고베타 + 외국인 매도 — <strong>포지션 크기 조절 필수</strong>.'},
+        '세후 수익률':{title:'세후 수익률 상세',rows:[{n:'양도소득세',v:'0%',c:'#30d158',s:'비과세'},{n:'ISA 활용',v:'가능',c:'#30d158',s:'절세'},{n:'세후 목표수익률',v:'+77%',c:'#30d158',s:'₩380만 기준'}],insight:'국내 종목 <strong>양도세 0% → 해외 대비 결정적 우위</strong>.'},
+      },
+    },
+    {code:'005930',name:'삼성전자',price:'₩87,200',change:'+0.8%',up:true,score:8.4,strengths:['HBM 회복','배당'],weaknesses:['점유율 회복속도'],radarScores:[8.5,7.2,8.0,6.8,9.0,8.2,7.5,8.8],radarColors:['#0a84ff','#ffd60a','#0a84ff','#ff453a','#30d158','#0a84ff','#ffd60a','#30d158'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'HBM4 양산 일정 확인',date:'2026.05.30',status:'유효',cls:'t-bull'},{icon:'✅',text:'배당수익률 2.8% 유지',date:'2026.06.01',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'중국 매출 회복 지연',date:'2026.06.02',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'₩82~92만',weight:'35%',color:'var(--ac)',fill:45},dip1:{label:'1차 조정',range:'₩72~82만',weight:'40%',color:'var(--gr)',fill:70},dip2:{label:'2차 조정',range:'₩60~72만',weight:'25%',color:'var(--ye)',fill:100},target:'₩130만',stopLoss:'₩70만',afterTax:{domestic:{ret:'+49%',label:'국내 세후',color:'var(--gr)',taxNote:'양도세 0%'},overseas:{ret:'+38%',label:'해외 가정',color:'var(--ye)',taxNote:'세금 20%후'}}},drill:{}},
+    {code:'011070',name:'LG이노텍',price:'₩198,000',change:'+1.2%',up:true,score:8.1,strengths:['아이폰 카메라','EPS'],weaknesses:['애플 의존도'],radarScores:[7.5,8.5,8.2,7.0,8.0,7.8,7.0,7.5],radarColors:['#ffd60a','#30d158','#0a84ff','#ffd60a','#0a84ff','#ffd60a','#ffd60a','#30d158'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'아이폰17 카메라 모듈 공급 확정',date:'2026.05.29',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'환율 변동성 리스크',date:'2026.06.03',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'₩185~210만',weight:'30%',color:'var(--ac)',fill:48},dip1:{label:'1차 조정',range:'₩160~185만',weight:'40%',color:'var(--gr)',fill:68},dip2:{label:'2차 조정',range:'₩130~160만',weight:'30%',color:'var(--ye)',fill:100},target:'₩280만',stopLoss:'₩155만',afterTax:{domestic:{ret:'+41%',label:'국내 세후',color:'var(--gr)',taxNote:'양도세 0%'},overseas:{ret:'+33%',label:'해외 가정',color:'var(--ye)',taxNote:'세금 20%후'}}},drill:{}},
+    {code:'012450',name:'한화에어로',price:'₩524,000',change:'+0.4%',up:true,score:7.7,strengths:['방산 성장','NATO'],weaknesses:['밸류에이션 부담'],radarScores:[8.0,8.8,6.5,6.0,8.2,7.5,6.8,8.0],radarColors:['#0a84ff','#30d158','#ff453a','#ff453a','#0a84ff','#ffd60a','#ff453a','#0a84ff'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'NATO 방산 수요 구조적 성장',date:'2026.06.01',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'P/E 28x — 밸류에이션 부담',date:'2026.06.03',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'₩490~560만',weight:'25%',color:'var(--ac)',fill:40},dip1:{label:'1차 조정',range:'₩420~490만',weight:'40%',color:'var(--gr)',fill:65},dip2:{label:'2차 조정',range:'₩350~420만',weight:'35%',color:'var(--ye)',fill:100},target:'₩750만',stopLoss:'₩400만',afterTax:{domestic:{ret:'+43%',label:'국내 세후',color:'var(--gr)',taxNote:'양도세 0%'},overseas:{ret:'+35%',label:'해외 가정',color:'var(--ye)',taxNote:'세금 20%후'}}},drill:{}},
+    {code:'009150',name:'삼성전기',price:'₩148,200',change:'-0.3%',up:false,score:7.3,strengths:['MLCC AI서버','기술력'],weaknesses:['수요 불확실'],radarScores:[7.8,7.5,7.2,6.5,8.0,7.8,7.2,7.5],radarColors:['#0a84ff','#ffd60a','#ffd60a','#ff453a','#0a84ff','#0a84ff','#ffd60a','#30d158'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'AI 서버 MLCC 수요 증가',date:'2026.05.28',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'스마트폰 수요 회복 불확실',date:'2026.06.02',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'₩138~158만',weight:'30%',color:'var(--ac)',fill:46},dip1:{label:'1차 조정',range:'₩118~138만',weight:'40%',color:'var(--gr)',fill:68},dip2:{label:'2차 조정',range:'₩95~118만',weight:'30%',color:'var(--ye)',fill:100},target:'₩200만',stopLoss:'₩112만',afterTax:{domestic:{ret:'+35%',label:'국내 세후',color:'var(--gr)',taxNote:'양도세 0%'},overseas:{ret:'+27%',label:'해외 가정',color:'var(--ye)',taxNote:'세금 20%후'}}},drill:{}},
+  ],
+  overseas: [
+    {code:'NVDA',name:'NVIDIA',price:'$1,089',change:'+3.1%',up:true,score:9.1,strengths:['AI 인프라 독점','모멘텀'],weaknesses:['밸류에이션','세금'],radarScores:[9.5,9.8,6.0,7.5,8.5,9.2,6.5,7.0],radarColors:['#30d158','#30d158','#ff453a','#ffd60a','#30d158','#30d158','#ff453a','#ffd60a'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'Blackwell GPU 수요 급증',date:'2026.06.01',status:'유효',cls:'t-bull'},{icon:'✅',text:'데이터센터 매출 YoY +122%',date:'2026.06.02',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'중국 수출 규제 리스크',date:'2026.06.03',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'$980~$1,150',weight:'25%',color:'var(--ac)',fill:42},dip1:{label:'1차 조정',range:'$820~$980',weight:'40%',color:'var(--gr)',fill:66},dip2:{label:'2차 조정',range:'$650~$820',weight:'35%',color:'var(--ye)',fill:100},target:'$1,600',stopLoss:'$780',afterTax:{domestic:{ret:'+47%',label:'해외 세후 (22%)',color:'var(--ye)',taxNote:'양도세 22%'},overseas:{ret:'+47%',label:'세후 수익',color:'var(--ye)',taxNote:'동일 적용'}}},drill:{}},
+    {code:'TSM',name:'TSMC',price:'$182',change:'+1.8%',up:true,score:8.8,strengths:['파운드리 독점','AI칩 생산'],weaknesses:['지정학 리스크'],radarScores:[9.2,8.5,7.8,7.0,9.0,8.8,6.0,7.5],radarColors:['#30d158','#30d158','#ffd60a','#ffd60a','#30d158','#30d158','#ff453a','#ffd60a'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'2nm 공정 양산 일정 확인',date:'2026.05.30',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'대만 지정학 리스크 상존',date:'2026.06.03',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'$168~$195',weight:'30%',color:'var(--ac)',fill:48},dip1:{label:'1차 조정',range:'$145~$168',weight:'40%',color:'var(--gr)',fill:70},dip2:{label:'2차 조정',range:'$120~$145',weight:'30%',color:'var(--ye)',fill:100},target:'$260',stopLoss:'$138',afterTax:{domestic:{ret:'+43%',label:'해외 세후 (22%)',color:'var(--ye)',taxNote:'양도세 22%'},overseas:{ret:'+43%',label:'세후 수익',color:'var(--ye)',taxNote:'동일 적용'}}},drill:{}},
+    {code:'MSFT',name:'Microsoft',price:'$482',change:'+0.9%',up:true,score:8.5,strengths:['Azure AI','구독 모델'],weaknesses:['성장 둔화우려'],radarScores:[9.0,8.2,7.5,7.8,9.5,8.5,8.2,7.8],radarColors:['#30d158','#0a84ff','#ffd60a','#ffd60a','#30d158','#30d158','#0a84ff','#ffd60a'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'Azure AI 성장 30%+ 유지',date:'2026.05.28',status:'유효',cls:'t-bull'},{icon:'✅',text:'Copilot 기업 구독 확대',date:'2026.06.01',status:'유효',cls:'t-bull'}],buyPlan:{current:{label:'현재 구간',range:'$450~$510',weight:'30%',color:'var(--ac)',fill:45},dip1:{label:'1차 조정',range:'$400~$450',weight:'40%',color:'var(--gr)',fill:68},dip2:{label:'2차 조정',range:'$340~$400',weight:'30%',color:'var(--ye)',fill:100},target:'$650',stopLoss:'$385',afterTax:{domestic:{ret:'+35%',label:'해외 세후 (22%)',color:'var(--ye)',taxNote:'양도세 22%'},overseas:{ret:'+35%',label:'세후 수익',color:'var(--ye)',taxNote:'동일 적용'}}},drill:{}},
+    {code:'GOOGL',name:'Alphabet',price:'$188',change:'+1.4%',up:true,score:8.2,strengths:['Gemini AI','광고 회복'],weaknesses:['검색 위협'],radarScores:[8.8,8.0,8.2,7.5,9.2,8.0,7.8,7.5],radarColors:['#30d158','#0a84ff','#0a84ff','#ffd60a','#30d158','#0a84ff','#ffd60a','#ffd60a'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'Gemini 2.0 사용자 급증',date:'2026.05.29',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'AI 검색 경쟁 압박 지속',date:'2026.06.02',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'$175~$200',weight:'30%',color:'var(--ac)',fill:46},dip1:{label:'1차 조정',range:'$155~$175',weight:'40%',color:'var(--gr)',fill:68},dip2:{label:'2차 조정',range:'$130~$155',weight:'30%',color:'var(--ye)',fill:100},target:'$260',stopLoss:'$148',afterTax:{domestic:{ret:'+38%',label:'해외 세후 (22%)',color:'var(--ye)',taxNote:'양도세 22%'},overseas:{ret:'+38%',label:'세후 수익',color:'var(--ye)',taxNote:'동일 적용'}}},drill:{}},
+    {code:'META',name:'Meta',price:'$598',change:'+2.1%',up:true,score:8.0,strengths:['광고 AI','Llama'],weaknesses:['규제 리스크'],radarScores:[8.5,8.2,7.8,7.5,8.8,8.0,7.0,7.8],radarColors:['#30d158','#0a84ff','#ffd60a','#ffd60a','#30d158','#0a84ff','#ffd60a','#ffd60a'],ctd:MARKET_CTD,validity:[{icon:'✅',text:'광고 매출 AI 최적화 효과',date:'2026.06.01',status:'유효',cls:'t-bull'},{icon:'⚠️',text:'EU 규제 벌금 리스크',date:'2026.06.02',status:'경고',cls:'t-warn'}],buyPlan:{current:{label:'현재 구간',range:'$560~$640',weight:'30%',color:'var(--ac)',fill:44},dip1:{label:'1차 조정',range:'$490~$560',weight:'40%',color:'var(--gr)',fill:67},dip2:{label:'2차 조정',range:'$400~$490',weight:'30%',color:'var(--ye)',fill:100},target:'$820',stopLoss:'$470',afterTax:{domestic:{ret:'+37%',label:'해외 세후 (22%)',color:'var(--ye)',taxNote:'양도세 22%'},overseas:{ret:'+37%',label:'세후 수익',color:'var(--ye)',taxNote:'동일 적용'}}},drill:{}},
+  ]
+};
+
+const AXIS_NAMES = ['비즈니스\n품질','성장\n모멘텀','밸류에이션','시장\n타이밍','재무\n건전성','매크로\n연계','리스크\n관리','세후\n수익률'];
+const AXIS_SHORT = ['비즈니스 품질','성장 모멘텀','밸류에이션','시장 타이밍','재무 건전성','매크로 연계','리스크 관리','세후 수익률'];
+
+/* ═══════════════════════════════════
+   STATE
+═══════════════════════════════════ */
+const STATE = {
+  activeTab: 'market',
+  activeGroup: 'domestic',
+  activeStock: '000660',
+  activeCTDNode: 2,
+  activeMarketCTD: 0,
+};
+
+/* ═══════════════════════════════════
+   TICKER
+═══════════════════════════════════ */
+function renderTickerTrack(items) {
+  const track = document.getElementById('ticker-track');
+  const doubled = [...items, ...items];
+  track.innerHTML = doubled.map(d =>
+    `<span class="ticker-item">
+      <span class="ticker-label">${d.label}</span>
+      <span class="ticker-val">${d.value}</span>
+      <span class="ticker-chg ${d.up ? 'up' : d.change.startsWith('-') ? 'dn' : 'nt'}">${d.change}</span>
+    </span>`
+  ).join('');
+}
+
+function initTicker() { renderTickerTrack(TICKER_DATA); }
+
+async function fetchTicker() {
+  const data = await apiFetch('/ticker');
+  if (data?.items) {
+    TICKER_DATA = data.items;
+    renderTickerTrack(TICKER_DATA);
+  }
+}
+
+/* ═══════════════════════════════════
+   CLOCK
+═══════════════════════════════════ */
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('tb-time').textContent = `${h}:${m}:${s}`;
+}
+
+/* ═══════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════ */
+const TAB_NAMES = {market:'시장',stocks:'종목',invest:'투자',more:'더보기'};
+
+function switchTab(id) {
+  STATE.activeTab = id;
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-' + id).classList.add('active');
+  document.getElementById('tb-tab-name').textContent = TAB_NAMES[id];
+  document.getElementById('content').scrollTop = 0;
+  if (id === 'stocks') renderStocksTab();
+}
+
+/* ═══════════════════════════════════
+   MARKET CTD CHAIN
+═══════════════════════════════════ */
+function renderMarketCTD() {
+  const chain = document.getElementById('market-ctd-chain');
+  chain.innerHTML = MARKET_CTD.map((node, i) => `
+    <div class="ctd-node${i === STATE.activeMarketCTD ? ' active' : ''}"
+         onclick="selectMarketCTD(${i})">
+      <div class="ctd-node-num">${node.num}</div>
+      <div class="ctd-node-text">${node.text.replace('\n','<br>')}</div>
+      <span class="badge ${node.badge}" style="font-size:9px;padding:1px 5px">${node.badgeText}</span>
+    </div>
+    ${i < MARKET_CTD.length - 1 ? '<div class="ctd-arrow">→</div>' : ''}
+  `).join('');
+  updateMarketCTDDetail(STATE.activeMarketCTD);
+}
+
+function selectMarketCTD(idx) {
+  STATE.activeMarketCTD = idx;
+  document.querySelectorAll('#market-ctd-chain .ctd-node').forEach((n,i) =>
+    n.classList.toggle('active', i === idx)
+  );
+  updateMarketCTDDetail(idx);
+}
+
+function updateMarketCTDDetail(idx) {
+  const d = MARKET_CTD[idx];
+  document.getElementById('mctd-num').textContent = d.num;
+  document.getElementById('mctd-title').textContent = d.title;
+  document.getElementById('mctd-rows').innerHTML = d.rows.map(r =>
+    `<div class="cdp-row">
+      <span class="cdp-arr">→</span>
+      <span class="cdp-text">${r.t}</span>
+      <span class="badge ${r.cls}" style="font-size:9px;padding:1px 5px;flex-shrink:0">${r.tag}</span>
+    </div>`
+  ).join('');
+  document.getElementById('mctd-conclusion').innerHTML = d.conc;
+}
+
+/* ═══════════════════════════════════
+   STOCKS TAB
+═══════════════════════════════════ */
+function setGroup(g) {
+  STATE.activeGroup = g;
+  document.getElementById('btn-domestic').classList.toggle('active', g === 'domestic');
+  document.getElementById('btn-overseas').classList.toggle('active', g === 'overseas');
+  const stocks = STOCKS[g];
+  STATE.activeStock = stocks[0].code;
+  renderChips();
+  renderZone4();
+}
+
+function renderChips() {
+  const stocks = STOCKS[STATE.activeGroup];
+  document.getElementById('chips-row').innerHTML = stocks.map(s =>
+    `<button class="stock-chip${s.code === STATE.activeStock ? ' active' : ''}"
+             onclick="selectStock('${s.code}')"
+             data-stock="${s.code}">
+      <span class="chip-name">${s.name}</span>
+      <span class="chip-score">${s.score}</span>
+    </button>`
+  ).join('');
+}
+
+function selectStock(code) {
+  STATE.activeStock = code;
+  document.querySelectorAll('.stock-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.stock === code)
+  );
+  renderZone4();
+  setTimeout(() => {
+    document.getElementById('z4-card').scrollIntoView({behavior:'smooth', block:'start'});
+  }, 50);
+}
+
+function getStock() {
+  return STOCKS[STATE.activeGroup].find(s => s.code === STATE.activeStock);
+}
+
+function renderZone4() {
+  const s = getStock();
+  if (!s) return;
+  const card = document.getElementById('z4-card');
+  const chgColor = s.up ? 'var(--gr)' : 'var(--re)';
+
+  card.innerHTML = `
+    <!-- Header -->
+    <div class="z4-header">
+      <div class="z4-name-row">
+        <div class="z4-name">${s.name}</div>
+        <div class="z4-code">${s.code}</div>
+        <div class="z4-score-pill">${s.score}</div>
+      </div>
+      <div class="z4-price-row">
+        <div class="z4-price">${s.price}</div>
+        <div class="z4-chg" style="color:${chgColor}">${s.change} ${s.up ? '↑' : '↓'}</div>
+      </div>
+      <div class="z4-badges">
+        ${s.strengths.map(t => `<span class="badge t-bull">${t}</span>`).join('')}
+        ${s.weaknesses.map(t => `<span class="badge t-warn">${t}</span>`).join('')}
+      </div>
+    </div>
+
+    <!-- CTD Chain -->
+    <div class="z4-section">
+      <div class="sec-label">① 왜 이 종목인가 — CTD 체인</div>
+      <div class="ctd-chain-outer">
+        <div class="ctd-chain-wrap" id="z4-ctd-wrap">
+          <div class="ctd-chain" id="z4-ctd-chain"></div>
+        </div>
+        <div class="ctd-detail-panel" id="z4-ctd-detail">
+          <div class="cdp-header">
+            <div class="cdp-num" id="z4ctd-num">03</div>
+            <div class="cdp-title" id="z4ctd-title">—</div>
+          </div>
+          <div id="z4ctd-rows"></div>
+          <div class="cdp-conclusion" id="z4ctd-conclusion"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Radar -->
+    <div class="z4-section">
+      <div class="sec-label">② 8축 종합 평가</div>
+      <div class="radar-wrap">
+        <svg id="radar-svg" viewBox="0 0 260 240" width="260" height="240"
+             style="display:block;overflow:visible;flex-shrink:0"></svg>
+        <div class="radar-legend" id="radar-legend"></div>
+      </div>
+    </div>
+
+    <!-- Validity -->
+    <div class="z4-section">
+      <div class="sec-label">③ 투자 논거 유효성</div>
+      ${s.validity.map(v => `
+        <div class="thesis-row">
+          <div class="th-icon">${v.icon}</div>
+          <div class="th-body">
+            <div class="th-text">${v.text}</div>
+            <div class="th-date">${v.date}</div>
+          </div>
+          <div class="th-badge ${v.cls}">${v.status}</div>
+        </div>`
+      ).join('')}
+    </div>
+
+    <!-- Buy Plan -->
+    <div class="z4-section">
+      <div class="sec-label">④ 매수 플랜</div>
+      ${['current','dip1','dip2'].map(k => {
+        const p = s.buyPlan[k];
+        return `
+        <div class="buy-plan-row">
+          <div class="bp-header">
+            <div class="bp-level">${p.label}</div>
+            <div class="bp-range-track">
+              <div class="bp-range-fill" style="width:${p.fill}%;background:${p.color}"></div>
+            </div>
+            <div class="bp-weight" style="color:${p.color}">${p.weight}</div>
+          </div>
+          <div class="bp-range-text">${p.range}</div>
+        </div>`;
+      }).join('')}
+      <div class="bp-targets">
+        <div class="bp-target-card">
+          <div class="bptc-label">목표가</div>
+          <div class="bptc-val" style="color:var(--gr)">${s.buyPlan.target}</div>
+        </div>
+        <div class="bp-target-card">
+          <div class="bptc-label">손절가</div>
+          <div class="bptc-val" style="color:var(--re)">${s.buyPlan.stopLoss}</div>
+        </div>
+      </div>
+      <div class="after-tax-row">
+        <div class="atc" style="background:${s.buyPlan.afterTax.domestic.color}14;border-color:${s.buyPlan.afterTax.domestic.color}30">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">${s.buyPlan.afterTax.domestic.label}</div>
+          <div class="mono" style="font-size:22px;font-weight:700;color:${s.buyPlan.afterTax.domestic.color}">${s.buyPlan.afterTax.domestic.ret}</div>
+          <div style="font-size:10px;color:var(--t4);margin-top:3px">${s.buyPlan.afterTax.domestic.taxNote}</div>
+        </div>
+        <div class="atc" style="background:${s.buyPlan.afterTax.overseas.color}14;border-color:${s.buyPlan.afterTax.overseas.color}30">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">${s.buyPlan.afterTax.overseas.label}</div>
+          <div class="mono" style="font-size:22px;font-weight:700;color:${s.buyPlan.afterTax.overseas.color}">${s.buyPlan.afterTax.overseas.ret}</div>
+          <div style="font-size:10px;color:var(--t4);margin-top:3px">${s.buyPlan.afterTax.overseas.taxNote}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  renderZ4CTDChain(s);
+  buildRadar(s);
+}
+
+function renderZ4CTDChain(s) {
+  const chain = document.getElementById('z4-ctd-chain');
+  if (!chain) return;
+  const defaultIdx = 2;
+  chain.innerHTML = s.ctd.map((node, i) => `
+    <div class="ctd-node${i === defaultIdx ? ' active' : ''}"
+         onclick="selectZ4CTD(${i})">
+      <div class="ctd-node-num">${node.num}</div>
+      <div class="ctd-node-text">${node.text.replace('\n','<br>')}</div>
+      <span class="badge ${node.badge}" style="font-size:9px;padding:1px 5px">${node.badgeText}</span>
+    </div>
+    ${i < s.ctd.length - 1 ? '<div class="ctd-arrow">→</div>' : ''}
+  `).join('');
+  updateZ4CTDDetail(s, defaultIdx);
+}
+
+function selectZ4CTD(idx) {
+  const s = getStock();
+  document.querySelectorAll('#z4-ctd-chain .ctd-node').forEach((n,i) =>
+    n.classList.toggle('active', i === idx)
+  );
+  updateZ4CTDDetail(s, idx);
+}
+
+function updateZ4CTDDetail(s, idx) {
+  const d = s.ctd[idx];
+  if (!d) return;
+  document.getElementById('z4ctd-num').textContent = d.num;
+  document.getElementById('z4ctd-title').textContent = d.title;
+  document.getElementById('z4ctd-rows').innerHTML = d.rows.map(r =>
+    `<div class="cdp-row">
+      <span class="cdp-arr">→</span>
+      <span class="cdp-text">${r.t}</span>
+      <span class="badge ${r.cls}" style="font-size:9px;padding:1px 5px;flex-shrink:0">${r.tag}</span>
+    </div>`
+  ).join('');
+  document.getElementById('z4ctd-conclusion').innerHTML = d.conc;
+}
+
+/* ═══════════════════════════════════
+   RADAR CHART
+═══════════════════════════════════ */
+function buildRadar(s) {
+  const svg = document.getElementById('radar-svg');
+  if (!svg) return;
+  svg.innerHTML = '';
+  const CX=130, CY=120, R=88, N=8;
+
+  function pt(i, r) {
+    const a = (i / N) * 2 * Math.PI - Math.PI / 2;
+    return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+  }
+
+  // Grid rings
+  [2,4,6,8,10].forEach(v => {
+    const r = (v/10)*R;
+    const pts = Array.from({length:N}, (_,i) => pt(i,r).join(',')).join(' ');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points', pts);
+    poly.setAttribute('fill', 'none');
+    poly.setAttribute('stroke', 'rgba(255,255,255,.07)');
+    poly.setAttribute('stroke-width', '0.5');
+    svg.appendChild(poly);
+  });
+
+  // Axis lines
+  for (let i=0; i<N; i++) {
+    const [x2,y2] = pt(i, R);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', CX); line.setAttribute('y1', CY);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', 'rgba(255,255,255,.08)');
+    line.setAttribute('stroke-width', '0.5');
+    svg.appendChild(line);
+  }
+
+  // Data polygon
+  const scores = s.radarScores;
+  const dataPts = scores.map((v,i) => pt(i, (v/10)*R).join(',')).join(' ');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  poly.setAttribute('points', dataPts);
+  poly.setAttribute('fill', 'rgba(10,132,255,.12)');
+  poly.setAttribute('stroke', 'rgba(10,132,255,.6)');
+  poly.setAttribute('stroke-width', '1.5');
+  svg.appendChild(poly);
+
+  // Dots + Labels
+  scores.forEach((v,i) => {
+    const [dx,dy] = pt(i, (v/10)*R);
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', dx); c.setAttribute('cy', dy);
+    c.setAttribute('r', '3.5');
+    c.setAttribute('fill', s.radarColors[i]);
+    c.setAttribute('stroke', '#000'); c.setAttribute('stroke-width', '1.5');
+    c.style.cursor = 'pointer';
+    const axisName = AXIS_SHORT[i];
+    c.addEventListener('click', () => openDrill(s, axisName));
+    svg.appendChild(c);
+
+    const [lx,ly] = pt(i, R+18);
+    const ca = Math.cos((i/N)*2*Math.PI - Math.PI/2);
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', lx); txt.setAttribute('y', ly);
+    txt.setAttribute('text-anchor', ca > 0.1 ? 'start' : ca < -0.1 ? 'end' : 'middle');
+    txt.setAttribute('dominant-baseline', 'central');
+    txt.setAttribute('font-size', '9.5');
+    txt.setAttribute('fill', 'rgba(255,255,255,.38)');
+    txt.setAttribute('font-family', 'Inter,sans-serif');
+    txt.style.cursor = 'pointer';
+    txt.addEventListener('click', () => openDrill(s, axisName));
+    AXIS_NAMES[i].split('\n').forEach((line, li) => {
+      const tspan = document.createElementNS('http://www.w3.org/2000/svg','tspan');
+      tspan.textContent = line;
+      tspan.setAttribute('x', lx);
+      if (li > 0) tspan.setAttribute('dy', '12');
+      txt.appendChild(tspan);
+    });
+    svg.appendChild(txt);
+  });
+
+  // Legend
+  const legend = document.getElementById('radar-legend');
+  if (!legend) return;
+  legend.innerHTML = scores.map((v,i) => `
+    <div class="rl-row" onclick="openDrill(getStock(),'${AXIS_SHORT[i]}')">
+      <div class="rl-dot" style="background:${s.radarColors[i]}"></div>
+      <div class="rl-name">${AXIS_SHORT[i]}</div>
+      <div class="rl-bar"><div class="rl-fill" style="width:${v*10}%;background:${s.radarColors[i]}"></div></div>
+      <div class="rl-val" style="color:${s.radarColors[i]}">${v}</div>
+    </div>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════
+   DRILL PANEL
+═══════════════════════════════════ */
+function openDrill(s, axisName) {
+  const drillData = (s.drill && s.drill[axisName]) ? s.drill[axisName] : null;
+  if (!drillData) {
+    const idx = AXIS_SHORT.indexOf(axisName);
+    const v = s.radarScores[idx];
+    document.getElementById('drill-title').textContent = axisName + ' 상세';
+    document.getElementById('drill-rows').innerHTML = `
+      <div class="drill-row">
+        <span class="drill-name">IQ 스코어</span>
+        <span class="drill-val" style="color:${s.radarColors[idx]}">${v} / 10</span>
+        <span class="drill-sig" style="background:${s.radarColors[idx]}18;color:${s.radarColors[idx]};border:.5px solid ${s.radarColors[idx]}44">평가 완료</span>
+      </div>`;
+    document.getElementById('drill-insight').innerHTML = `<strong>${axisName}</strong> 세부 데이터는 업데이트 중입니다.`;
+  } else {
+    document.getElementById('drill-title').textContent = drillData.title;
+    document.getElementById('drill-rows').innerHTML = drillData.rows.map(r =>
+      `<div class="drill-row">
+        <span class="drill-name">${r.n}</span>
+        <span class="drill-val" style="color:${r.c}">${r.v}</span>
+        <span class="drill-sig" style="background:${r.c}18;color:${r.c};border:.5px solid ${r.c}44">${r.s}</span>
+      </div>`
+    ).join('');
+    document.getElementById('drill-insight').innerHTML = drillData.insight;
+  }
+  document.getElementById('drill-overlay').classList.add('open');
+}
+
+function closeDrill() {
+  document.getElementById('drill-overlay').classList.remove('open');
+}
+
+function renderStocksTab() {
+  renderChips();
+  renderZone4();
+}
+
+/* ═══════════════════════════════════
+   API — MARKET TAB
+═══════════════════════════════════ */
+async function fetchMarket() {
+  const data = await apiFetch('/market');
+  if (!data) return;
+
+  // 온도 게이지 업데이트
+  const gaugeNum = document.querySelector('.gauge-num');
+  if (gaugeNum) { gaugeNum.textContent = data.temperature; gaugeNum.style.color = data.verdict_color; }
+  const verdict = document.querySelector('.hero-verdict');
+  if (verdict) { verdict.textContent = data.verdict; verdict.style.color = data.verdict_color; }
+  const summary = document.querySelector('.hero-summary');
+  if (summary) summary.innerHTML = data.summary;
+
+  // 게이지 바늘 각도 업데이트
+  updateGauge(data.temperature);
+
+  // 퀵 메트릭
+  const chips = document.querySelectorAll('.metric-chip');
+  if (chips.length && data.quick_metrics) {
+    data.quick_metrics.forEach((m, i) => {
+      if (chips[i]) {
+        chips[i].querySelector('.mc-val').textContent = m.value;
+        chips[i].querySelector('.mc-val').style.color = m.color;
+        chips[i].querySelector('.mc-label').textContent = m.label;
+        chips[i].querySelector('.mc-sub').textContent = m.sub;
+      }
+    });
+  }
+
+  // CTD 체인 업데이트 (API 데이터가 있으면 교체)
+  if (data.ctd_chain) {
+    STATE.marketCTDData = data.ctd_chain;
+    renderMarketCTDFromAPI(data.ctd_chain);
+  }
+
+  // 수급 업데이트
+  if (data.supply) updateSupply(data.supply);
+
+  // 시장 국면
+  if (data.phase) updatePhase(data.phase);
+
+  // 종목 신호 요약
+  if (data.signal_summary) updateSignalSummary(data.signal_summary);
+}
+
+function updateGauge(temp) {
+  const circumference = Math.PI * 116;
+  const filled = circumference * (temp / 100);
+  const offset = circumference - filled;
+  const fill = document.getElementById('gauge-fill');
+  if (fill) { fill.setAttribute('stroke-dasharray', `${filled}`); fill.setAttribute('stroke-dashoffset', `${offset}`); }
+  // 바늘 각도: -90deg(0%) ~ +90deg(100%)
+  const needle = document.getElementById('gauge-needle');
+  if (needle) {
+    const angle = -Math.PI/2 + (Math.PI * temp/100);
+    const r = 100;
+    const x2 = 140 + r * Math.cos(angle);
+    const y2 = 148 + r * Math.sin(angle);
+    needle.setAttribute('x2', x2.toFixed(1));
+    needle.setAttribute('y2', y2.toFixed(1));
+  }
+}
+
+function updateSupply(supply) {
+  const rows = document.querySelectorAll('.supply-row');
+  const actors = [supply.foreign, supply.institution, supply.individual];
+  rows.forEach((row, i) => {
+    if (!actors[i]) return;
+    const fill = row.querySelector('.supply-fill');
+    const amt  = row.querySelector('.supply-amt');
+    const color = actors[i].direction >= 0 ? 'var(--gr)' : 'var(--re)';
+    if (fill) { fill.style.width = actors[i].pct + '%'; fill.style.background = color; }
+    if (amt)  { amt.textContent = actors[i].amount; amt.style.color = color; }
+  });
+  const verdict = document.querySelector('.supply-verdict div');
+  if (verdict) verdict.innerHTML = `<strong style="color:${supply.judgment_cls}">${supply.judgment}</strong>`;
+}
+
+function updatePhase(phase) {
+  const name = document.querySelector('.lower-panel .phase-name, [class*="phase-name"]');
+  if (name) { name.textContent = phase.name; name.style.color = phase.color; }
+}
+
+function updateSignalSummary(sig) {
+  const scores = document.querySelectorAll('.sig-score');
+  if (scores[0]) scores[0].textContent = sig.domestic_avg;
+  if (scores[1]) scores[1].textContent = sig.overseas_avg;
+  const top1Name = document.querySelector('.top1-name');
+  if (top1Name) top1Name.textContent = sig.top1_name;
+  const top1Score = document.querySelector('.top1-score');
+  if (top1Score) top1Score.textContent = sig.top1_score;
+  const top1Why = document.querySelector('.top1-why');
+  if (top1Why) top1Why.textContent = sig.top1_why;
+}
+
+function renderMarketCTDFromAPI(chain) {
+  const container = document.getElementById('market-ctd-chain');
+  if (!container) return;
+  container.innerHTML = chain.map((node, i) => `
+    <div class="ctd-node${i === STATE.activeMarketCTD ? ' active' : ''}"
+         onclick="selectMarketCTDFromAPI(${i})">
+      <div class="ctd-node-num">${node.num}</div>
+      <div class="ctd-node-text">${node.text.replace('\n','<br>')}</div>
+      <span class="badge ${node.badge}" style="font-size:9px;padding:1px 5px">${node.badge_text}</span>
+    </div>
+    ${i < chain.length - 1 ? '<div class="ctd-arrow">→</div>' : ''}
+  `).join('');
+  updateMarketCTDDetailFromAPI(chain[STATE.activeMarketCTD]);
+}
+
+function selectMarketCTDFromAPI(idx) {
+  STATE.activeMarketCTD = idx;
+  document.querySelectorAll('#market-ctd-chain .ctd-node').forEach((n,i) =>
+    n.classList.toggle('active', i === idx)
+  );
+  const chain = STATE.marketCTDData;
+  if (chain) updateMarketCTDDetailFromAPI(chain[idx]);
+}
+
+function updateMarketCTDDetailFromAPI(node) {
+  if (!node) return;
+  document.getElementById('mctd-num').textContent = node.num;
+  document.getElementById('mctd-title').textContent = node.title;
+  document.getElementById('mctd-rows').innerHTML = node.rows.map(r =>
+    `<div class="cdp-row">
+      <span class="cdp-arr">→</span>
+      <span class="cdp-text">${r.text}</span>
+      <span class="badge ${r.cls}" style="font-size:9px;padding:1px 5px;flex-shrink:0">${r.tag}</span>
+    </div>`
+  ).join('');
+  document.getElementById('mctd-conclusion').innerHTML = node.conclusion;
+}
+
+/* ═══════════════════════════════════
+   API — STOCKS TAB
+═══════════════════════════════════ */
+let API_STOCKS_CACHE = { domestic: null, overseas: null };
+let API_DETAIL_CACHE = {};
+
+async function fetchStocksList(group) {
+  if (API_STOCKS_CACHE[group]) return API_STOCKS_CACHE[group];
+  const data = await apiFetch(`/stocks?group=${group}`);
+  if (data?.items) {
+    API_STOCKS_CACHE[group] = data.items;
+    return data.items;
+  }
+  // fallback: 목업 STOCKS 데이터 형식 변환
+  return STOCKS[group].map(s => ({code:s.code, name:s.name, price:s.price, change:s.change, up:s.up, score:s.score}));
+}
+
+async function fetchStockDetail(code) {
+  if (API_DETAIL_CACHE[code]) return API_DETAIL_CACHE[code];
+  const data = await apiFetch(`/stocks/${code}`);
+  if (data?.header) {
+    API_DETAIL_CACHE[code] = data;
+    return data;
+  }
+  // fallback: 목업 데이터 변환
+  const s = getStock();
+  return s ? _mockToAPIDetail(s) : null;
+}
+
+function _mockToAPIDetail(s) {
+  return {
+    header: { code:s.code, name:s.name, price:s.price, change:s.change, up:s.up, score:s.score },
+    strengths: s.strengths, weaknesses: s.weaknesses,
+    ctd_chain: s.ctd.map(n => ({ num:n.num, text:n.text, badge:n.badge, badge_text:n.badgeText, title:n.title, rows:n.rows.map(r=>({text:r.t, tag:r.tag, cls:r.cls})), conclusion:n.conc })),
+    radar: { scores:s.radarScores, colors:s.radarColors, axes:AXIS_SHORT },
+    validity: s.validity.map(v=>({icon:v.icon, text:v.text, date:v.date, status:v.status, cls:v.cls})),
+    buy_plan: {
+      levels: ['current','dip1','dip2'].map(k=>({ label:s.buyPlan[k].label, range:s.buyPlan[k].range, weight:s.buyPlan[k].weight, color:s.buyPlan[k].color, fill:s.buyPlan[k].fill })),
+      target: s.buyPlan.target, stop_loss: s.buyPlan.stopLoss,
+      after_tax_domestic: { ret:s.buyPlan.afterTax.domestic.ret, label:s.buyPlan.afterTax.domestic.label, color:s.buyPlan.afterTax.domestic.color, tax_note:s.buyPlan.afterTax.domestic.taxNote },
+      after_tax_overseas:  { ret:s.buyPlan.afterTax.overseas.ret, label:s.buyPlan.afterTax.overseas.label, color:s.buyPlan.afterTax.overseas.color, tax_note:s.buyPlan.afterTax.overseas.taxNote },
+    },
+    drill: s.drill || {},
+  };
+}
+
+// API 데이터로 Zone 4 렌더
+function renderZone4FromAPI(detail) {
+  const s = detail;
+  const h = s.header;
+  const card = document.getElementById('z4-card');
+  if (!card) return;
+
+  const chgColor = h.up ? 'var(--gr)' : 'var(--re)';
+
+  card.innerHTML = `
+    <div class="z4-header">
+      <div class="z4-name-row">
+        <div class="z4-name">${h.name}</div>
+        <div class="z4-code">${h.code}</div>
+        <div class="z4-score-pill">${h.score}</div>
+      </div>
+      <div class="z4-price-row">
+        <div class="z4-price">${h.price}</div>
+        <div class="z4-chg" style="color:${chgColor}">${h.change} ${h.up ? '↑' : '↓'}</div>
+      </div>
+      <div class="z4-badges">
+        ${(s.strengths||[]).map(t => `<span class="badge t-bull">${t}</span>`).join('')}
+        ${(s.weaknesses||[]).map(t => `<span class="badge t-warn">${t}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="z4-section">
+      <div class="sec-label">① 왜 이 종목인가 — CTD 체인</div>
+      <div class="ctd-chain-outer">
+        <div class="ctd-chain-wrap" id="z4-ctd-wrap">
+          <div class="ctd-chain" id="z4-ctd-chain"></div>
+        </div>
+        <div class="ctd-detail-panel" id="z4-ctd-detail">
+          <div class="cdp-header">
+            <div class="cdp-num" id="z4ctd-num">03</div>
+            <div class="cdp-title" id="z4ctd-title">—</div>
+          </div>
+          <div id="z4ctd-rows"></div>
+          <div class="cdp-conclusion" id="z4ctd-conclusion"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="z4-section">
+      <div class="sec-label">② 8축 종합 평가</div>
+      <div class="radar-wrap">
+        <svg id="radar-svg" viewBox="0 0 260 240" width="260" height="240"
+             style="display:block;overflow:visible;flex-shrink:0"></svg>
+        <div class="radar-legend" id="radar-legend"></div>
+      </div>
+    </div>
+
+    <div class="z4-section">
+      <div class="sec-label">③ 투자 논거 유효성</div>
+      ${(s.validity||[]).map(v => `
+        <div class="thesis-row">
+          <div class="th-icon">${v.icon}</div>
+          <div class="th-body">
+            <div class="th-text">${v.text}</div>
+            <div class="th-date">${v.date}</div>
+          </div>
+          <div class="th-badge ${v.cls}">${v.status}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="z4-section">
+      <div class="sec-label">④ 매수 플랜</div>
+      ${(s.buy_plan?.levels||[]).map(p => `
+        <div class="buy-plan-row">
+          <div class="bp-header">
+            <div class="bp-level">${p.label}</div>
+            <div class="bp-range-track">
+              <div class="bp-range-fill" style="width:${p.fill}%;background:${p.color}"></div>
+            </div>
+            <div class="bp-weight" style="color:${p.color}">${p.weight}</div>
+          </div>
+          <div class="bp-range-text">${p.range}</div>
+        </div>`).join('')}
+      <div class="bp-targets">
+        <div class="bp-target-card">
+          <div class="bptc-label">목표가</div>
+          <div class="bptc-val" style="color:var(--gr)">${s.buy_plan?.target||'—'}</div>
+        </div>
+        <div class="bp-target-card">
+          <div class="bptc-label">손절가</div>
+          <div class="bptc-val" style="color:var(--re)">${s.buy_plan?.stop_loss||'—'}</div>
+        </div>
+      </div>
+      <div class="after-tax-row">
+        ${[s.buy_plan?.after_tax_domestic, s.buy_plan?.after_tax_overseas].filter(Boolean).map(at => `
+        <div class="atc" style="background:${at.color}14;border-color:${at.color}30">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">${at.label}</div>
+          <div class="mono" style="font-size:22px;font-weight:700;color:${at.color}">${at.ret}</div>
+          <div style="font-size:10px;color:var(--t4);margin-top:3px">${at.tax_note}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  `;
+
+  // CTD 체인 렌더
+  const ctdChain = s.ctd_chain || [];
+  const z4Chain = document.getElementById('z4-ctd-chain');
+  if (z4Chain) {
+    z4Chain.innerHTML = ctdChain.map((node, i) => `
+      <div class="ctd-node${i === 2 ? ' active' : ''}" onclick="selectZ4CTDFromAPI(${i})">
+        <div class="ctd-node-num">${node.num}</div>
+        <div class="ctd-node-text">${(node.text||'').replace('\n','<br>')}</div>
+        <span class="badge ${node.badge}" style="font-size:9px;padding:1px 5px">${node.badge_text}</span>
+      </div>
+      ${i < ctdChain.length - 1 ? '<div class="ctd-arrow">→</div>' : ''}
+    `).join('');
+    STATE._currentDetailCTD = ctdChain;
+    updateZ4CTDDetailFromAPI(ctdChain[2] || ctdChain[0]);
+  }
+
+  // 레이더 렌더
+  if (s.radar) buildRadarFromAPI(s.radar, s.drill || {});
+}
+
+function selectZ4CTDFromAPI(idx) {
+  document.querySelectorAll('#z4-ctd-chain .ctd-node').forEach((n,i) =>
+    n.classList.toggle('active', i === idx)
+  );
+  const chain = STATE._currentDetailCTD || [];
+  updateZ4CTDDetailFromAPI(chain[idx]);
+}
+
+function updateZ4CTDDetailFromAPI(node) {
+  if (!node) return;
+  document.getElementById('z4ctd-num').textContent = node.num;
+  document.getElementById('z4ctd-title').textContent = node.title;
+  document.getElementById('z4ctd-rows').innerHTML = (node.rows||[]).map(r =>
+    `<div class="cdp-row">
+      <span class="cdp-arr">→</span>
+      <span class="cdp-text">${r.text}</span>
+      <span class="badge ${r.cls}" style="font-size:9px;padding:1px 5px;flex-shrink:0">${r.tag}</span>
+    </div>`
+  ).join('');
+  document.getElementById('z4ctd-conclusion').innerHTML = node.conclusion || '';
+}
+
+function buildRadarFromAPI(radar, drill) {
+  const svg = document.getElementById('radar-svg');
+  if (!svg) return;
+  svg.innerHTML = '';
+  const CX=130, CY=120, R=88, N=8;
+
+  function pt(i, r) {
+    const a = (i/N)*2*Math.PI - Math.PI/2;
+    return [CX + r*Math.cos(a), CY + r*Math.sin(a)];
+  }
+
+  [2,4,6,8,10].forEach(v => {
+    const r = (v/10)*R;
+    const pts = Array.from({length:N}, (_,i) => pt(i,r).join(',')).join(' ');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points', pts);
+    poly.setAttribute('fill','none');
+    poly.setAttribute('stroke','rgba(255,255,255,.07)');
+    poly.setAttribute('stroke-width','0.5');
+    svg.appendChild(poly);
+  });
+
+  for (let i=0; i<N; i++) {
+    const [x2,y2] = pt(i,R);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',CX); line.setAttribute('y1',CY);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','rgba(255,255,255,.08)');
+    line.setAttribute('stroke-width','0.5');
+    svg.appendChild(line);
+  }
+
+  const dataPts = radar.scores.map((v,i) => pt(i,(v/10)*R).join(',')).join(' ');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  poly.setAttribute('points',dataPts);
+  poly.setAttribute('fill','rgba(10,132,255,.12)');
+  poly.setAttribute('stroke','rgba(10,132,255,.6)');
+  poly.setAttribute('stroke-width','1.5');
+  svg.appendChild(poly);
+
+  radar.scores.forEach((v,i) => {
+    const [dx,dy] = pt(i,(v/10)*R);
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',dx); c.setAttribute('cy',dy);
+    c.setAttribute('r','3.5');
+    c.setAttribute('fill',radar.colors[i]);
+    c.setAttribute('stroke','#000'); c.setAttribute('stroke-width','1.5');
+    c.style.cursor='pointer';
+    const axName = radar.axes[i];
+    c.addEventListener('click',()=>openDrillFromAPI(axName, v, radar.colors[i], drill));
+    svg.appendChild(c);
+
+    const [lx,ly] = pt(i,R+18);
+    const ca = Math.cos((i/N)*2*Math.PI - Math.PI/2);
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x',lx); txt.setAttribute('y',ly);
+    txt.setAttribute('text-anchor', ca>0.1?'start':ca<-0.1?'end':'middle');
+    txt.setAttribute('dominant-baseline','central');
+    txt.setAttribute('font-size','9.5');
+    txt.setAttribute('fill','rgba(255,255,255,.38)');
+    txt.setAttribute('font-family','Inter,sans-serif');
+    txt.style.cursor='pointer';
+    txt.addEventListener('click',()=>openDrillFromAPI(axName, v, radar.colors[i], drill));
+    const parts = axName.split(' ');
+    parts.forEach((part, li) => {
+      const ts = document.createElementNS('http://www.w3.org/2000/svg','tspan');
+      ts.textContent = part;
+      ts.setAttribute('x',lx);
+      if (li>0) ts.setAttribute('dy','12');
+      txt.appendChild(ts);
+    });
+    svg.appendChild(txt);
+  });
+
+  const legend = document.getElementById('radar-legend');
+  if (!legend) return;
+  legend.innerHTML = radar.scores.map((v,i) => `
+    <div class="rl-row" onclick="openDrillFromAPI('${radar.axes[i]}',${v},'${radar.colors[i]}',_currentDrill)">
+      <div class="rl-dot" style="background:${radar.colors[i]}"></div>
+      <div class="rl-name">${radar.axes[i]}</div>
+      <div class="rl-bar"><div class="rl-fill" style="width:${v*10}%;background:${radar.colors[i]}"></div></div>
+      <div class="rl-val" style="color:${radar.colors[i]}">${v}</div>
+    </div>`).join('');
+
+  window._currentDrill = drill;
+}
+
+function openDrillFromAPI(axisName, score, color, drill) {
+  const d = drill && drill[axisName];
+  if (d) {
+    document.getElementById('drill-title').textContent = d.title;
+    document.getElementById('drill-rows').innerHTML = d.rows.map(r =>
+      `<div class="drill-row">
+        <span class="drill-name">${r.n}</span>
+        <span class="drill-val" style="color:${r.c}">${r.v}</span>
+        <span class="drill-sig" style="background:${r.c}18;color:${r.c};border:.5px solid ${r.c}44">${r.s}</span>
+      </div>`
+    ).join('');
+    document.getElementById('drill-insight').innerHTML = d.insight;
+  } else {
+    document.getElementById('drill-title').textContent = axisName + ' 상세';
+    document.getElementById('drill-rows').innerHTML = `
+      <div class="drill-row">
+        <span class="drill-name">IQ 스코어</span>
+        <span class="drill-val" style="color:${color}">${score} / 10</span>
+        <span class="drill-sig" style="background:${color}18;color:${color};border:.5px solid ${color}44">평가 완료</span>
+      </div>`;
+    document.getElementById('drill-insight').innerHTML = `<strong>${axisName}</strong> 상세 데이터 로딩 중입니다.`;
+  }
+  document.getElementById('drill-overlay').classList.add('open');
+}
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+function init() {
+  // 1. 즉시 목업으로 렌더 (화면 즉시 표시)
+  initTicker();
+  updateClock();
+  renderMarketCTD();
+
+  // 2. 실시간 API 데이터로 교체
+  fetchTicker();
+  fetchMarket();
+
+  // 3. 자동 갱신 타이머
+  setInterval(updateClock, 1000);
+  setInterval(fetchTicker,  60 * 1000);   // 1분
+  setInterval(fetchMarket, 300 * 1000);   // 5분
+}
+
+// API 기반 종목 탭 렌더
+async function renderStocksTab() {
+  const items = await fetchStocksList(STATE.activeGroup);
+  if (!items) return;
+
+  document.getElementById('chips-row').innerHTML = items.map(s =>
+    `<button class="stock-chip${s.code === STATE.activeStock ? ' active' : ''}"
+             onclick="selectStockAPI('${s.code}')"
+             data-stock="${s.code}">
+      <span class="chip-name">${s.name}</span>
+      <span class="chip-score">${s.score}</span>
+    </button>`
+  ).join('');
+
+  if (!STATE.activeStock) STATE.activeStock = items[0]?.code;
+  if (STATE.activeStock) await loadAndRenderDetail(STATE.activeStock);
+}
+
+async function selectStockAPI(code) {
+  STATE.activeStock = code;
+  document.querySelectorAll('.stock-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.stock === code)
+  );
+  await loadAndRenderDetail(code);
+  setTimeout(() => document.getElementById('z4-card')?.scrollIntoView({behavior:'smooth', block:'start'}), 50);
+}
+
+async function loadAndRenderDetail(code) {
+  showLoading('z4-card', '종목 데이터 로딩 중…');
+  const detail = await fetchStockDetail(code);
+  if (detail) renderZone4FromAPI(detail);
+  else showError('z4-card', `${code} 데이터를 불러올 수 없습니다`);
+}
+
+// setGroup 재정의 — API 연동
+function setGroup(g) {
+  STATE.activeGroup = g;
+  API_STOCKS_CACHE[g] = null;  // 그룹 변경 시 캐시 무효화
+  document.getElementById('btn-domestic').classList.toggle('active', g === 'domestic');
+  document.getElementById('btn-overseas').classList.toggle('active', g === 'overseas');
+  STATE.activeStock = null;
+  renderStocksTab();
+}
+
+init();
+</script>
+</body>
+</html>

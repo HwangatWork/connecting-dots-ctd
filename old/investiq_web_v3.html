@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvestIQ CTD — Web v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════ */
+:root {
+  --bg:   #000;
+  --l1:   #0a0a0a;
+  --l2:   #111113;
+  --l3:   #1a1a1c;
+  --g1:   rgba(255,255,255,.04);
+  --g2:   rgba(255,255,255,.07);
+  --g3:   rgba(255,255,255,.12);
+  --gb:   rgba(255,255,255,.08);
+  --gb2:  rgba(255,255,255,.15);
+  --t1:   #ffffff;
+  --t2:   rgba(255,255,255,.62);
+  --t3:   rgba(255,255,255,.36);
+  --t4:   rgba(255,255,255,.18);
+  --ac:   #0a84ff;
+  --acd:  rgba(10,132,255,.12);
+  --acb:  rgba(10,132,255,.25);
+  --gr:   #30d158;
+  --grd:  rgba(48,209,88,.1);
+  --grb:  rgba(48,209,88,.22);
+  --ye:   #ffd60a;
+  --yed:  rgba(255,214,10,.08);
+  --yeb:  rgba(255,214,10,.2);
+  --re:   #ff453a;
+  --red:  rgba(255,69,58,.08);
+  --reb:  rgba(255,69,58,.2);
+  --or:   #ff9f0a;
+  --pu:   #bf5af2;
+  --pud:  rgba(191,90,242,.1);
+  --pub:  rgba(191,90,242,.25);
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+html { height:100%; }
+body {
+  background: var(--bg);
+  font-family: 'Inter','Noto Sans KR',sans-serif;
+  color: var(--t1);
+  height:100%;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+.mono { font-family:'JetBrains Mono',monospace; }
+
+/* ═══════════════════════════════════════
+   APP SHELL — 웹 3단 레이아웃
+   [topbar 52px 고정]
+   [sidebar 260px | main 가변]
+═══════════════════════════════════════ */
+.topbar {
+  position: fixed; top:0; left:0; right:0; z-index:200;
+  height:52px;
+  background: rgba(0,0,0,.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: .5px solid var(--gb);
+  display: flex; align-items: center;
+  padding: 0 24px;
+}
+.tb-logo {
+  font-size:16px; font-weight:700; letter-spacing:-.03em;
+  margin-right:0; color:var(--t1); text-decoration:none;
+}
+.tb-logo span { color:var(--ac); }
+.tb-divider {
+  width:.5px; height:18px; background:var(--gb2);
+  margin: 0 24px;
+}
+.tb-nav { display:flex; gap:4px; }
+.tb-tab {
+  display:flex; align-items:center; gap:7px;
+  padding:6px 16px; border-radius:8px;
+  font-size:13px; font-weight:500; color:var(--t3);
+  cursor:pointer; border:none; background:transparent;
+  transition:all .15s;
+}
+.tb-tab:hover { color:var(--t2); background:var(--g1); }
+.tb-tab.on { color:var(--t1); background:var(--g2); }
+.tb-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.tb-right {
+  margin-left:auto; display:flex; align-items:center; gap:16px;
+}
+.tb-time { font-size:11px; color:var(--t4); font-family:'JetBrains Mono',monospace; letter-spacing:.02em; }
+.tb-refresh {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--g2); border:.5px solid var(--gb);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:13px; color:var(--t3);
+  transition:all .15s;
+}
+.tb-refresh:hover { background:var(--g3); color:var(--t2); }
+
+/* ── BODY LAYOUT ── */
+.app-body {
+  display: flex;
+  padding-top: 52px;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed;
+  top: 52px; left: 0; bottom: 0;
+  width: 260px;
+  background: var(--l1);
+  border-right: .5px solid var(--gb);
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.sidebar::-webkit-scrollbar { width:4px; }
+.sidebar::-webkit-scrollbar-track { background:transparent; }
+.sidebar::-webkit-scrollbar-thumb { background:var(--gb2); border-radius:2px; }
+
+.sb-section { padding:20px 16px 8px; }
+.sb-section-label {
+  font-size:10px; font-weight:600; color:var(--t4);
+  letter-spacing:.1em; text-transform:uppercase;
+  padding:0 8px; margin-bottom:6px;
+}
+
+/* 시장 사이드바 — CTD 체인 */
+.sb-ctd-step {
+  padding:10px 12px; border-radius:10px;
+  cursor:pointer; transition:background .15s;
+  margin-bottom:2px;
+}
+.sb-ctd-step:hover { background:var(--g1); }
+.sb-ctd-step.on { background:var(--g2); }
+.sb-step-header { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.sb-step-num {
+  width:18px; height:18px; border-radius:50%;
+  background:var(--g2); border:.5px solid var(--gb);
+  font-size:9px; font-weight:600;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--t3); flex-shrink:0;
+}
+.sb-step-title { font-size:12px; font-weight:500; color:var(--t2); flex:1; }
+.sb-step-result { font-size:10px; color:var(--t4); padding-left:26px; line-height:1.4; }
+.sb-step-detail {
+  display:none; margin-top:8px; padding-top:8px;
+  border-top:.5px solid var(--gb);
+}
+.sb-ctd-step.on .sb-step-detail { display:block; }
+.sb-chain-row {
+  display:flex; gap:6px; align-items:flex-start;
+  padding:3px 0; font-size:11px;
+}
+.sb-arr { color:var(--t4); flex-shrink:0; font-size:11px; }
+.sb-chain-text { color:var(--t2); flex:1; line-height:1.45; }
+.sb-tag {
+  font-size:9px; font-weight:500; padding:1px 5px;
+  border-radius:3px; white-space:nowrap; flex-shrink:0;
+}
+.t-core { background:var(--acd); color:var(--ac); border:.5px solid var(--acb); }
+.t-bull { background:var(--grd); color:var(--gr); border:.5px solid var(--grb); }
+.t-warn { background:var(--yed); color:var(--ye); border:.5px solid var(--yeb); }
+.t-risk { background:var(--red); color:var(--re); border:.5px solid var(--reb); }
+.t-act  { background:rgba(255,159,10,.08); color:var(--or); border:.5px solid rgba(255,159,10,.2); }
+.sb-conclusion {
+  margin-top:6px; padding:7px 9px;
+  background:var(--acd); border:.5px solid var(--acb);
+  border-radius:6px; font-size:10px; color:var(--t2); line-height:1.5;
+}
+.sb-conclusion strong { color:var(--ac); font-weight:500; }
+.sb-divider { height:.5px; background:var(--gb); margin:12px 16px; }
+
+/* 종목 사이드바 */
+.sb-phase-bar {
+  margin:0 8px 12px; padding:10px 12px;
+  background:var(--grd); border:.5px solid var(--grb);
+  border-radius:10px; display:flex; flex-direction:column; gap:5px;
+}
+.sb-phase-pill {
+  font-size:16px; font-weight:700; color:var(--gr);
+  letter-spacing:-.02em; line-height:1;
+}
+.sb-phase-desc { font-size:11px; color:rgba(48,209,88,.6); }
+.sb-stock-row {
+  display:flex; align-items:center; gap:9px;
+  padding:9px 12px; border-radius:10px;
+  cursor:pointer; transition:background .15s;
+  margin-bottom:1px;
+}
+.sb-stock-row:hover { background:var(--g1); }
+.sb-stock-row.on {
+  background:var(--acd);
+  border:.5px solid var(--acb);
+}
+.sb-rank { font-size:10px; color:var(--t4); min-width:14px; font-family:'JetBrains Mono',monospace; }
+.sb-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.sb-stock-info { flex:1; overflow:hidden; }
+.sb-stock-name { font-size:12px; font-weight:500; color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-stock-row.on .sb-stock-name { color:var(--ac); }
+.sb-stock-why { font-size:10px; color:var(--t4); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-score { font-size:14px; font-weight:700; color:var(--ac); font-family:'JetBrains Mono',monospace; }
+
+/* ── MAIN CONTENT ── */
+.main {
+  margin-left: 260px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ══════════════════════════════════
+   시장 페이지 레이아웃
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   [METRIC BAR — 전체 너비 고정]
+   [HERO 영역 — 게이지 + 요약]
+   [하단 2열: 수급(左) | 신호요약(右)]
+══════════════════════════════════ */
+.pane { display:none; }
+.pane.on { display:block; }
+
+/* 메트릭 바 — topbar 바로 아래 고정 */
+.metric-bar {
+  position: sticky; top:52px; z-index:90;
+  background: rgba(10,10,10,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: .5px solid var(--gb);
+  padding: 0 40px;
+  display: flex; align-items: stretch;
+  height: 54px;
+  gap: 0;
+}
+.metric-item {
+  display: flex; align-items: center; gap:14px;
+  padding: 0 28px;
+  border-right: .5px solid var(--gb);
+  cursor: pointer; transition: background .15s;
+  flex-shrink: 0;
+}
+.metric-item:first-child { padding-left:0; }
+.metric-item:last-child { border-right:none; }
+.metric-item:hover { background:var(--g1); }
+.mi-label { font-size:10px; font-weight:500; color:var(--t4); letter-spacing:.05em; text-transform:uppercase; margin-bottom:3px; }
+.mi-val { font-size:16px; font-weight:500; font-family:'JetBrains Mono',monospace; letter-spacing:-.01em; line-height:1; }
+.mi-sub { font-size:10px; color:var(--t4); margin-top:2px; }
+.metric-spacer { flex:1; }
+.metric-status {
+  display:flex; align-items:center; gap:10px;
+  padding: 0 0 0 28px;
+}
+.ms-temp-num { font-size:28px; font-weight:700; font-family:'JetBrains Mono',monospace; letter-spacing:-.04em; line-height:1; }
+.ms-temp-label { font-size:11px; color:var(--t4); margin-top:3px; }
+.ms-verdict { font-size:12px; font-weight:600; color:var(--gr); margin-top:1px; }
+
+/* Hero 섹션 */
+.hero-section {
+  padding: 48px 40px 40px;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 80px;
+  align-items: center;
+  border-bottom: .5px solid var(--gb);
+}
+.hero-eyebrow {
+  font-size:11px; font-weight:600; color:var(--t4);
+  letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px;
+}
+.hero-temp-row { display:flex; align-items:baseline; gap:14px; margin-bottom:12px; }
+.hero-num {
+  font-size:120px; font-weight:800; letter-spacing:-.06em;
+  line-height:.9; color:var(--t1);
+  font-variant-numeric:tabular-nums;
+}
+.hero-denom { font-size:28px; font-weight:200; color:var(--t3); letter-spacing:-.02em; }
+.hero-verdict-big { font-size:24px; font-weight:600; color:var(--gr); letter-spacing:-.02em; margin-bottom:14px; }
+.hero-summary {
+  font-size:15px; font-weight:300; color:var(--t2);
+  line-height:1.7; letter-spacing:-.01em;
+  max-width:480px;
+}
+.hero-summary strong { color:var(--t1); font-weight:500; }
+
+/* 게이지 오른쪽 */
+.gauge-block { display:flex; flex-direction:column; align-items:center; position:relative; }
+
+/* 하단 콘텐츠 그리드 — 3열 */
+.lower-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--gb);
+}
+.lower-panel {
+  background: var(--l1);
+  padding: 28px 32px;
+}
+.lower-panel:nth-child(1) { background: var(--l1); }
+.lower-panel:nth-child(2) { background: var(--l1); }
+.lower-panel:nth-child(3) { background: var(--l1); }
+.lp-label {
+  font-size:10px; font-weight:600; color:var(--t4);
+  letter-spacing:.1em; text-transform:uppercase; margin-bottom:20px;
+  display:flex; align-items:center; gap:8px;
+}
+.lp-tag {
+  font-size:9px; font-weight:600; padding:2px 7px;
+  border-radius:4px; letter-spacing:.06em; text-transform:uppercase;
+}
+
+/* 수급 바 */
+.supply-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.supply-actor { font-size:12px; color:var(--t3); min-width:44px; }
+.supply-bg { flex:1; height:6px; background:var(--g2); border-radius:3px; overflow:hidden; }
+.supply-fill { height:6px; border-radius:3px; transition:width .6s ease; }
+.supply-amt { font-size:12px; font-weight:500; font-family:'JetBrains Mono',monospace; min-width:80px; text-align:right; }
+.supply-verdict {
+  padding:11px 14px; background:var(--yed);
+  border:.5px solid var(--yeb); border-radius:10px;
+  font-size:12px; color:var(--t2); line-height:1.6;
+  display:flex; gap:8px; align-items:flex-start;
+}
+.supply-verdict strong { color:var(--ye); font-weight:500; }
+
+/* 종목 신호 */
+.signal-cols { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.signal-col {
+  background:var(--g1); border:.5px solid var(--gb);
+  border-radius:12px; padding:16px;
+}
+.sig-flag { font-size:20px; margin-bottom:6px; }
+.sig-group { font-size:10px; color:var(--t4); margin-bottom:10px; }
+.sig-score { font-size:32px; font-weight:700; color:var(--ac); font-family:'JetBrains Mono',monospace; letter-spacing:-.04em; line-height:1; }
+.sig-max { font-size:14px; color:var(--t4); }
+.sig-badges { display:flex; gap:6px; margin-top:8px; }
+.sig-buy { font-size:10px; font-weight:500; padding:2px 8px; border-radius:4px; background:var(--grd); color:var(--gr); border:.5px solid var(--grb); }
+.sig-hold { font-size:10px; font-weight:500; padding:2px 8px; border-radius:4px; background:var(--g2); color:var(--t3); border:.5px solid var(--gb); }
+.top1-row {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 14px; background:var(--acd);
+  border:.5px solid var(--acb); border-radius:10px;
+}
+.top1-rank { font-size:10px; font-weight:600; color:var(--ac); }
+.top1-info { flex:1; }
+.top1-name { font-size:14px; font-weight:500; color:var(--t1); margin-bottom:2px; }
+.top1-why { font-size:10px; color:var(--t3); }
+.top1-score { font-size:18px; font-weight:700; color:var(--ac); font-family:'JetBrains Mono',monospace; }
+
+/* 마켓 국면 패널 */
+.phase-big {
+  text-align:center; padding:24px 0 20px;
+}
+.phase-label { font-size:11px; color:var(--t4); letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; }
+.phase-name { font-size:36px; font-weight:700; color:var(--gr); letter-spacing:-.03em; margin-bottom:8px; }
+.phase-detail { font-size:12px; color:var(--t3); line-height:1.6; }
+.phase-metrics { display:flex; gap:1px; background:var(--gb); margin:20px -32px 0; }
+.phase-m { flex:1; background:var(--l1); padding:14px 16px; text-align:center; }
+.pm-label { font-size:10px; color:var(--t4); margin-bottom:5px; letter-spacing:.04em; text-transform:uppercase; }
+.pm-val { font-size:18px; font-weight:600; font-family:'JetBrains Mono',monospace; }
+
+/* ══════════════════════════════════
+   종목 페이지 레이아웃
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   사이드바에 종목 리스트 고정
+   메인 영역: Zone 4 전체
+   상단 메트릭 바 재활용
+══════════════════════════════════ */
+
+/* Zone 4 — 전체 너비 활용 */
+.z4-header {
+  padding:36px 40px 28px;
+  border-bottom:.5px solid var(--gb);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:40px;
+  align-items:flex-end;
+}
+.z4-name-row { display:flex; align-items:baseline; gap:12px; margin-bottom:10px; }
+.z4-name { font-size:40px; font-weight:700; letter-spacing:-.04em; color:var(--t1); }
+.z4-ticker { font-size:14px; color:var(--t3); font-family:'JetBrains Mono',monospace; }
+.z4-score-pill {
+  font-size:13px; font-weight:700;
+  background:var(--ac); color:#000;
+  padding:4px 14px; border-radius:20px; margin-left:auto;
+  font-family:'JetBrains Mono',monospace;
+}
+.z4-price-row { display:flex; align-items:baseline; gap:14px; }
+.z4-price { font-size:52px; font-weight:700; letter-spacing:-.05em; font-variant-numeric:tabular-nums; color:var(--t1); }
+.z4-chg { font-size:18px; font-weight:500; }
+.z4-ctd-link { font-size:12px; color:var(--ac); cursor:pointer; display:flex; align-items:center; gap:4px; }
+.z4-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+
+/* Zone 4 3열 콘텐츠 */
+.z4-grid {
+  display:grid;
+  grid-template-columns:300px 1fr 340px;
+  gap:1px;
+  background:var(--gb);
+  min-height:calc(100vh - 160px);
+}
+.z4-col { background:var(--l1); padding:24px 24px; overflow-y:auto; }
+.z4-col::-webkit-scrollbar { width:3px; }
+.z4-col::-webkit-scrollbar-thumb { background:var(--gb2); }
+.z4-col-label {
+  font-size:10px; font-weight:600; color:var(--t4);
+  letter-spacing:.1em; text-transform:uppercase; margin-bottom:18px;
+}
+
+/* CTD 인과관계 (좌열) */
+.z4-ctd-row {
+  display:flex; gap:9px; align-items:flex-start;
+  padding:6px 0; font-size:12px;
+}
+.z4-ctd-arr { color:var(--t4); flex-shrink:0; margin-top:1px; }
+.z4-ctd-text { color:var(--t2); flex:1; line-height:1.5; }
+.z4-ctd-line { width:.5px; height:12px; background:var(--gb); margin:1px 0 1px 4px; }
+.z4-ctd-conclusion {
+  margin-top:14px; padding:10px 12px;
+  background:var(--acd); border:.5px solid var(--acb);
+  border-radius:8px; font-size:11px; color:var(--t2); line-height:1.6;
+}
+.z4-ctd-conclusion strong { color:var(--ac); font-weight:500; }
+
+/* 레이더 (중열) */
+.radar-row { display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:16px; }
+.radar-legend-v { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; width:100%; }
+.rl-row {
+  display:flex; align-items:center; gap:7px;
+  padding:5px 8px; cursor:pointer; border-radius:6px;
+  transition:background .15s; width:100%;
+}
+.rl-row:hover { background:var(--g1); }
+.rl-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.rl-name { font-size:11px; color:var(--t3); min-width:48px; }
+.rl-bar { width:60px; height:3px; background:var(--g2); border-radius:2px; overflow:hidden; }
+.rl-fill { height:3px; border-radius:2px; }
+.rl-val { font-size:11px; font-weight:500; font-family:'JetBrains Mono',monospace; min-width:26px; text-align:right; }
+
+/* 드릴다운 */
+.drill-panel {
+  display:none; margin-top:14px;
+  background:var(--l2); border:.5px solid var(--gb);
+  border-radius:12px; overflow:hidden;
+}
+.drill-panel.open { display:block; }
+.drill-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 16px; border-bottom:.5px solid var(--gb);
+}
+.drill-title { font-size:13px; font-weight:600; color:var(--t1); }
+.drill-close { font-size:11px; color:var(--t3); cursor:pointer; padding:2px 8px; background:var(--g2); border-radius:4px; border:.5px solid var(--gb); }
+.drill-row {
+  display:flex; align-items:center; gap:10px;
+  padding:7px 16px; border-bottom:.5px solid var(--gb); font-size:12px;
+}
+.drill-row:last-child { border-bottom:none; }
+.drill-name { flex:1; color:var(--t3); font-size:11px; }
+.drill-val { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; min-width:72px; text-align:right; }
+.drill-sig { font-size:10px; font-weight:500; padding:1px 7px; border-radius:3px; white-space:nowrap; min-width:60px; text-align:center; }
+.drill-insight {
+  margin:8px 16px 12px; padding:9px 11px;
+  background:var(--acd); border-left:2px solid var(--ac);
+  border-radius:0 6px 6px 0; font-size:11px; color:var(--t2); line-height:1.6;
+}
+.drill-insight strong { color:var(--ac); font-weight:500; }
+
+/* 논거 + 매수플랜 (우열) */
+.thesis-row {
+  display:flex; gap:10px; align-items:flex-start;
+  padding:9px 0; border-bottom:.5px solid var(--gb); font-size:12px;
+}
+.thesis-row:last-child { border-bottom:none; padding-bottom:0; }
+.th-icon { font-size:13px; flex-shrink:0; margin-top:1px; }
+.th-body { flex:1; }
+.th-text { color:var(--t2); line-height:1.4; margin-bottom:2px; }
+.th-date { font-size:10px; color:var(--t4); }
+.th-badge { font-size:10px; font-weight:500; padding:2px 8px; border-radius:4px; white-space:nowrap; flex-shrink:0; margin-top:1px; }
+
+.sec-divider { height:.5px; background:var(--gb); margin:20px 0; }
+
+/* 가격 레인지 */
+.range-outer { position:relative; height:36px; margin:8px 0 4px; }
+.range-bg { position:absolute; top:15px; left:0; right:0; height:6px; background:var(--g2); border-radius:3px; }
+.range-seg { position:absolute; top:15px; height:6px; border-radius:3px; }
+.range-marker { position:absolute; top:7px; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; }
+.marker-dot { width:14px; height:14px; border-radius:50%; background:var(--ac); border:2px solid #000; box-shadow:0 0 0 3px var(--acd); }
+.marker-lbl { font-size:9px; color:var(--ac); font-weight:600; white-space:nowrap; margin-top:2px; font-family:'JetBrains Mono',monospace; }
+.range-axis { display:flex; justify-content:space-between; font-size:10px; color:var(--t4); font-family:'JetBrains Mono',monospace; margin-bottom:3px; }
+.range-zones { display:flex; margin-bottom:14px; }
+.rz { font-size:10px; font-weight:500; text-align:center; }
+.plan-tbl { width:100%; border-collapse:collapse; font-size:12px; }
+.plan-tbl th { color:var(--t4); font-weight:500; font-size:10px; padding:5px 0; text-align:left; border-bottom:.5px solid var(--gb); letter-spacing:.04em; text-transform:uppercase; }
+.plan-tbl th:not(:first-child) { text-align:right; }
+.plan-tbl td { padding:10px 0; color:var(--t2); border-bottom:.5px solid var(--gb); vertical-align:middle; }
+.plan-tbl td:not(:first-child) { text-align:right; font-family:'JetBrains Mono',monospace; }
+.plan-tbl tr.now-r td { color:var(--t1); }
+.plan-tbl tr:last-child td { border-bottom:none; }
+.ph-tag { font-size:10px; font-weight:500; padding:2px 8px; border-radius:4px; display:inline-block; }
+
+.target-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-top:.5px solid var(--gb); margin-top:8px; }
+.tl .tl-l { font-size:11px; color:var(--t3); }
+.tl .tl-s { font-size:10px; color:var(--t4); margin-top:1px; }
+.target-v { font-size:22px; font-weight:700; color:var(--gr); font-family:'JetBrains Mono',monospace; }
+
+.stop-row { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:var(--red); border:.5px solid var(--reb); border-radius:10px; margin-top:12px; }
+.sl .sl-l { font-size:11px; color:rgba(255,69,58,.7); }
+.sl .sl-r { font-size:10px; color:rgba(255,69,58,.45); margin-top:1px; }
+.stop-v { font-size:22px; font-weight:700; color:var(--re); font-family:'JetBrains Mono',monospace; }
+
+.tax-row { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:var(--g1); border:.5px solid var(--gb); border-radius:10px; margin-top:8px; }
+.tax-l { font-size:11px; color:var(--t3); }
+.tax-v { font-size:11px; color:var(--t2); font-family:'JetBrains Mono',monospace; }
+
+/* 세후 비교 */
+.after-tax-compare { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.atc-col { border-radius:8px; padding:10px 12px; }
+.atc-col.kr { background:var(--acd); border:.5px solid var(--acb); }
+.atc-col.us { background:var(--g1); border:.5px solid var(--gb); }
+.atc-tag { font-size:10px; color:var(--t4); margin-bottom:4px; }
+.atc-return { font-size:22px; font-weight:700; font-family:'JetBrains Mono',monospace; letter-spacing:-.03em; }
+.atc-after { font-size:10px; margin-top:2px; }
+.atc-winner { font-size:10px; font-weight:500; padding:1px 6px; border-radius:3px; background:var(--acd); color:var(--ac); border:.5px solid var(--acb); margin-top:5px; display:inline-block; }
+
+/* ══════════════════════════════════
+   나의 투자 페이지
+══════════════════════════════════ */
+.myinvest-grid {
+  display:grid;
+  grid-template-columns:1fr 420px;
+  gap:1px;
+  background:var(--gb);
+  min-height:calc(100vh - 106px);
+}
+.mi-panel { background:var(--l1); padding:32px 36px; overflow-y:auto; }
+.mi-panel-label {
+  font-size:11px; font-weight:600; color:var(--t4);
+  letter-spacing:.1em; text-transform:uppercase; margin-bottom:24px;
+  padding-bottom:14px; border-bottom:.5px solid var(--gb);
+}
+.mi-stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+.mi-stat { background:var(--g1); border:.5px solid var(--gb); border-radius:12px; padding:16px 18px; }
+.mi-stat-num { font-size:26px; font-weight:700; font-family:'JetBrains Mono',monospace; letter-spacing:-.03em; margin-bottom:4px; }
+.mi-stat-lbl { font-size:10px; color:var(--t4); }
+
+.alloc-row { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:.5px solid var(--gb); }
+.alloc-row:last-child { border-bottom:none; }
+.alloc-name { font-size:13px; font-weight:500; color:var(--t2); flex:0 0 160px; }
+.alloc-sub { font-size:10px; color:var(--t4); margin-top:1px; }
+.alloc-bar-bg { flex:1; height:6px; background:var(--g2); border-radius:3px; overflow:hidden; }
+.alloc-bar-fill { height:6px; border-radius:3px; }
+.alloc-pct { font-size:14px; font-weight:500; min-width:40px; text-align:right; font-family:'JetBrains Mono',monospace; }
+.alloc-tax-badge { font-size:10px; font-weight:500; padding:2px 8px; border-radius:4px; white-space:nowrap; }
+
+.tax-calc { }
+.tc-input-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:.5px solid var(--gb); font-size:13px; }
+.tc-label { flex:1; color:var(--t3); }
+.tc-input {
+  width:140px; height:36px;
+  background:var(--g2); border:.5px solid var(--gb); border-radius:8px;
+  display:flex; align-items:center; padding:0 12px;
+  font-size:13px; color:var(--t2); font-family:'JetBrains Mono',monospace;
+  justify-content:flex-end;
+}
+.tc-result {
+  margin-top:16px; padding:16px 18px;
+  background:var(--acd); border:.5px solid var(--acb); border-radius:12px;
+}
+.tc-result-lbl { font-size:11px; color:rgba(10,132,255,.6); margin-bottom:6px; }
+.tc-result-num { font-size:36px; font-weight:700; color:var(--ac); font-family:'JetBrains Mono',monospace; letter-spacing:-.04em; }
+.tc-result-desc { font-size:12px; color:var(--t3); margin-top:6px; line-height:1.55; }
+
+.ai-section { margin-top:28px; }
+.ai-input-box {
+  background:var(--g1); border:.5px solid var(--gb2);
+  border-radius:14px; padding:16px 18px; margin-bottom:12px;
+}
+.ai-placeholder { font-size:13px; color:var(--t4); margin-bottom:12px; }
+.ai-examples { display:flex; flex-direction:column; gap:6px; }
+.ai-ex {
+  padding:10px 14px; background:var(--g2); border:.5px solid var(--gb);
+  border-radius:10px; font-size:13px; color:var(--t2);
+  cursor:pointer; display:flex; align-items:center; gap:10px;
+  transition:background .15s;
+}
+.ai-ex:hover { background:var(--g3); }
+.ai-arrow { color:var(--ac); margin-left:auto; flex-shrink:0; }
+
+/* 절세 카드 */
+.saving-card { background:var(--g1); border:.5px solid var(--gb); border-radius:12px; padding:16px 18px; margin-bottom:10px; }
+.sc-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.sc-name { font-size:14px; font-weight:500; }
+.sc-limit { font-size:12px; font-weight:600; color:var(--gr); }
+.sc-desc { font-size:12px; color:var(--t3); line-height:1.55; margin-bottom:8px; }
+.sc-effect { font-size:11px; color:var(--gr); }
+
+/* ── 수평 CTD 체인 (방식 B) ── */
+.h-chain {
+  display:flex; align-items:flex-start; gap:0;
+  padding:14px 16px; background:var(--g1);
+  border:.5px solid var(--gb); border-radius:10px;
+  margin-bottom:14px;
+}
+.h-node {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; gap:5px; cursor:pointer;
+  padding:4px 4px; border-radius:8px;
+  transition:background .15s; position:relative;
+}
+.h-node:hover { background:var(--g2); }
+.h-node.on { background:var(--acd); }
+.h-node-num {
+  font-size:9px; font-weight:600; color:var(--t4);
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.h-node.on .h-node-num { color:rgba(10,132,255,.5); }
+.h-node-text {
+  font-size:11px; font-weight:500; color:var(--t2);
+  text-align:center; line-height:1.35;
+}
+.h-node.on .h-node-text { color:var(--ac); }
+.h-node-tag {
+  font-size:9px; font-weight:500; padding:1px 5px;
+  border-radius:3px; white-space:nowrap;
+}
+.h-arrow {
+  color:var(--t4); font-size:14px; flex-shrink:0;
+  margin-top:16px; padding:0 2px;
+}
+
+/* 상세 패널 */
+.h-detail {
+  background:var(--acd); border:.5px solid var(--acb);
+  border-radius:10px; padding:12px 14px; margin-bottom:16px;
+}
+.hd-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.hd-num {
+  width:18px; height:18px; border-radius:50%;
+  background:rgba(10,132,255,.2); font-size:9px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--ac); flex-shrink:0;
+}
+.hd-title { font-size:12px; font-weight:600; color:var(--ac); }
+.hd-row {
+  display:flex; gap:7px; align-items:flex-start;
+  padding:4px 0; font-size:11px;
+}
+.hd-arr { color:rgba(10,132,255,.35); flex-shrink:0; margin-top:1px; }
+.hd-text { color:var(--t2); flex:1; line-height:1.45; }
+.hd-tag {
+  font-size:9px; font-weight:500; padding:1px 5px;
+  border-radius:3px; white-space:nowrap; flex-shrink:0;
+}
+.hd-conclusion {
+  margin-top:8px; padding:8px 10px;
+  background:rgba(10,132,255,.1); border-radius:6px;
+  font-size:11px; color:var(--t2); line-height:1.55;
+}
+.hd-conclusion strong { color:var(--ac); font-weight:500; }
+
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <a class="tb-logo">Invest<span>IQ</span></a>
+  <div class="tb-divider"></div>
+  <nav class="tb-nav">
+    <button class="tb-tab on" onclick="switchTab('market',this)">
+      <div class="tb-dot" style="background:var(--gr)"></div>시장
+    </button>
+    <button class="tb-tab" onclick="switchTab('stock',this)">종목</button>
+    <button class="tb-tab" onclick="switchTab('myinvest',this)">나의 투자</button>
+  </nav>
+  <div class="tb-right">
+    <span class="tb-time">2026.06.03&nbsp;&nbsp;15:42 KST</span>
+    <div class="tb-refresh">↻</div>
+  </div>
+</div>
+
+<div class="app-body">
+
+<!-- ══════════════════════════════
+     사이드바 — 시장 탭
+══════════════════════════════════ -->
+<div class="sidebar" id="sb-market">
+  <div class="sb-section">
+    <div class="sb-section-label">Zone 2 — CTD 체인</div>
+
+    <div class="sb-ctd-step on" id="step1" onclick="toggleStep('step1')">
+      <div class="sb-step-header">
+        <div class="sb-step-num">01</div>
+        <div class="sb-step-title">매크로 환경</div>
+      </div>
+      <div class="sb-step-result">국내주식 세후 우위</div>
+      <div class="sb-step-detail">
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">금리 4.45% → 달러 강세</span><span class="sb-tag t-core">핵심</span></div>
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">장단기금리차 역전 해소</span><span class="sb-tag t-bull">강세</span></div>
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">하이일드 스프레드 3.2%</span><span class="sb-tag t-bull">안정</span></div>
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">원달러 1,382 → 국내 우위</span><span class="sb-tag t-warn">경고</span></div>
+        <div class="sb-conclusion"><strong>결론:</strong> 국내주식 세후 실수익 우위. 해외 비중 축소 검토.</div>
+      </div>
+    </div>
+
+    <div class="sb-ctd-step" id="step2" onclick="toggleStep('step2')">
+      <div class="sb-step-header">
+        <div class="sb-step-num">02</div>
+        <div class="sb-step-title">수급 신호</div>
+      </div>
+      <div class="sb-step-result">코스닥 로테이션 감지</div>
+      <div class="sb-step-detail">
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">AI CapEx $700B+ 확정</span><span class="sb-tag t-bull">강세</span></div>
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">외국인 차익실현 진행중</span><span class="sb-tag t-warn">경고</span></div>
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">코스닥 방산·소재 이동</span><span class="sb-tag t-act">주목</span></div>
+        <div class="sb-conclusion"><strong>결론:</strong> 차익실현, 논거 훼손 아님. 방산 주목.</div>
+      </div>
+    </div>
+
+    <div class="sb-ctd-step" id="step3" onclick="toggleStep('step3')">
+      <div class="sb-step-header">
+        <div class="sb-step-num">03</div>
+        <div class="sb-step-title">최종 결론</div>
+      </div>
+      <div class="sb-step-result">분할 매수 3단계 실행</div>
+      <div class="sb-step-detail">
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">EPS 버블 없음 · 실적 기반</span><span class="sb-tag t-bull">강세</span></div>
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">CAPE P/E 29.1 부담 근접</span><span class="sb-tag t-warn">경고</span></div>
+        <div class="sb-chain-row"><span class="sb-arr">→</span><span class="sb-chain-text">3단계 분할 접근</span><span class="sb-tag t-act">행동</span></div>
+        <div class="sb-conclusion"><strong>결론:</strong> <strong>분할 매수 실행.</strong> 현재 30% → 조정 40% → 급락 30%.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 종목 탭 사이드바 -->
+<div class="sidebar" id="sb-stock" style="display:none">
+  <div class="sb-section">
+    <div class="sb-phase-bar">
+      <span class="sb-phase-pill">강세장</span>
+      <span class="sb-phase-desc">EPS 성장 + 모멘텀</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 8px;margin-bottom:8px">
+      <div style="font-size:10px;color:var(--t4)">● 코어&nbsp; ○ 자동 선별</div>
+      <div style="display:flex;background:var(--g1);border:.5px solid var(--gb);border-radius:6px;overflow:hidden">
+        <button style="padding:4px 10px;font-size:10px;font-weight:500;background:var(--g3);color:var(--t1);border:none;cursor:pointer">🇰🇷</button>
+        <button style="padding:4px 10px;font-size:10px;font-weight:500;background:transparent;color:var(--t3);border:none;cursor:pointer">🌐</button>
+      </div>
+    </div>
+    <div class="sb-stock-row on" onclick="selectStock(this)">
+      <div class="sb-rank">1</div><div class="sb-dot" style="background:var(--ac)"></div>
+      <div class="sb-stock-info"><div class="sb-stock-name">SK하이닉스</div><div class="sb-stock-why">EPS +492% · P/E 6.5x</div></div>
+      <div class="sb-score">8.5</div>
+    </div>
+    <div class="sb-stock-row" onclick="selectStock(this)">
+      <div class="sb-rank">2</div><div class="sb-dot" style="background:var(--ac)"></div>
+      <div class="sb-stock-info"><div class="sb-stock-name">삼성전자</div><div class="sb-stock-why">코어 고정 · HBM 회복</div></div>
+      <div class="sb-score">8.4</div>
+    </div>
+    <div class="sb-stock-row" onclick="selectStock(this)">
+      <div class="sb-rank">3</div><div class="sb-dot" style="background:rgba(255,255,255,.25)"></div>
+      <div class="sb-stock-info"><div class="sb-stock-name">LG이노텍</div><div class="sb-stock-why">EPS +65% · P/E 16x</div></div>
+      <div class="sb-score">8.1</div>
+    </div>
+    <div class="sb-stock-row" onclick="selectStock(this)">
+      <div class="sb-rank">4</div><div class="sb-dot" style="background:rgba(255,255,255,.25)"></div>
+      <div class="sb-stock-info"><div class="sb-stock-name">한화에어로스페이스</div><div class="sb-stock-why">방산 분산 · NATO</div></div>
+      <div class="sb-score">7.7</div>
+    </div>
+    <div class="sb-stock-row" onclick="selectStock(this)">
+      <div class="sb-rank">5</div><div class="sb-dot" style="background:rgba(255,255,255,.25)"></div>
+      <div class="sb-stock-info"><div class="sb-stock-name">삼성전기</div><div class="sb-stock-why">MLCC · AI 서버</div></div>
+      <div class="sb-score">7.3</div>
+    </div>
+  </div>
+</div>
+
+<!-- 나의 투자 탭 사이드바 없음 -->
+<div class="sidebar" id="sb-myinvest" style="display:none">
+  <div class="sb-section">
+    <div class="sb-section-label">절세 계좌</div>
+    <div class="saving-card">
+      <div class="sc-head"><div class="sc-name">ISA 중개형</div><div class="sc-limit">연 2,000만원</div></div>
+      <div class="sc-desc">국내주식 비과세, 해외 ETF 9.9% 분리과세</div>
+      <div class="sc-effect">절세 효과: 연 최대 198만원</div>
+    </div>
+    <div class="saving-card">
+      <div class="sc-head"><div class="sc-name">연금저축펀드</div><div class="sc-limit">세액공제 400만원</div></div>
+      <div class="sc-desc">납입액 16.5% 세액공제. 국내 ETF·펀드 중심.</div>
+      <div class="sc-effect">환급: 연 최대 66만원</div>
+    </div>
+    <div class="saving-card">
+      <div class="sc-head"><div class="sc-name">IRP</div><div class="sc-limit">추가 300만원</div></div>
+      <div class="sc-desc">연금저축 합산 700만원 공제. 퇴직금 연계.</div>
+      <div class="sc-effect">추가 환급: 연 최대 49.5만원</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+<!-- ════════════════════════
+     시장 탭
+════════════════════════ -->
+<div class="pane on" id="pane-market">
+
+  <!-- 메트릭 바 -->
+  <div class="metric-bar">
+    <div class="metric-item">
+      <div><div class="mi-label">VIX</div><div class="mi-val" style="color:var(--gr)">18.2</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">F&amp;G</div><div class="mi-val" style="color:var(--ye)">59</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">CAPE P/E</div><div class="mi-val" style="color:var(--ye)">29.1</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">USD/KRW</div><div class="mi-val" style="color:var(--re)">1,382</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">S&amp;P 500</div><div class="mi-val" style="color:var(--gr)">+0.42%</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">코스피</div><div class="mi-val" style="color:var(--ac)">2,748</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">나스닥</div><div class="mi-val" style="color:var(--gr)">+0.61%</div></div>
+    </div>
+    <div class="metric-spacer"></div>
+    <div class="metric-status">
+      <div>
+        <div class="ms-temp-num" style="color:var(--gr)">62</div>
+        <div class="ms-temp-label">종합 온도</div>
+      </div>
+      <div style="width:.5px;height:32px;background:var(--gb);margin:0 16px"></div>
+      <div>
+        <div class="ms-verdict">분할 매수 구간</div>
+        <div style="font-size:11px;color:var(--t4);margin-top:2px">강세장 · EPS 우위</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero-section">
+    <div>
+      <div class="hero-eyebrow">Zone 1A — 시장 체온계</div>
+      <div class="hero-temp-row">
+        <div class="hero-num">62</div>
+        <div class="hero-denom">/ 100</div>
+      </div>
+      <div class="hero-verdict-big">분할 매수 구간</div>
+      <div class="hero-summary">
+        <strong>EPS 성장이 주가를 앞서는 구간입니다.</strong> 단, 외국인 차익실현이 감지되고 있습니다. 한 번에 매수하지 말고 3단계 분할 접근을 권장합니다. 장단기금리차 역전 해소와 하이일드 스프레드 안정은 긍정적 신호입니다.
+      </div>
+    </div>
+    <div class="gauge-block">
+      <svg viewBox="0 0 320 180" width="320" height="180">
+        <defs>
+          <linearGradient id="grd" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#30d158"/>
+            <stop offset="45%"  stop-color="#ffd60a"/>
+            <stop offset="100%" stop-color="#ff453a"/>
+          </linearGradient>
+        </defs>
+        <path d="M 26 160 A 134 134 0 0 1 294 160" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="12" stroke-linecap="round"/>
+        <path d="M 26 160 A 134 134 0 0 1 294 160" fill="none" stroke="url(#grd)" stroke-width="12" stroke-linecap="round" stroke-dasharray="420" stroke-dashoffset="160"/>
+        <line x1="160" y1="160" x2="218" y2="56" stroke="white" stroke-width="3" stroke-linecap="round" opacity=".92"/>
+        <circle cx="160" cy="160" r="7" fill="#000" stroke="white" stroke-width="3"/>
+        <text x="14" y="175" font-size="11" fill="rgba(255,255,255,.22)" font-family="JetBrains Mono">FEAR</text>
+        <text x="126" y="20" font-size="11" fill="rgba(255,255,255,.22)" font-family="JetBrains Mono">50</text>
+        <text x="306" y="175" font-size="11" fill="rgba(255,255,255,.22)" font-family="JetBrains Mono" text-anchor="end">GREED</text>
+      </svg>
+      <div style="margin-top:-28px;text-align:center">
+        <div style="font-size:48px;font-weight:800;color:var(--t1);letter-spacing:-.05em;line-height:1;font-family:'JetBrains Mono',monospace">62</div>
+        <div style="font-size:11px;color:var(--t4);margin-top:4px">종합 시장 온도</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 3열 -->
+  <div class="lower-grid">
+    <!-- 수급 -->
+    <div class="lower-panel">
+      <div class="lp-label">
+        Zone 1B — 수급 구조
+        <span class="lp-tag" style="background:var(--yed);color:var(--ye);border:.5px solid var(--yeb)">최근 1개월</span>
+      </div>
+      <div class="supply-row">
+        <div class="supply-actor">외국인</div>
+        <div class="supply-bg"><div class="supply-fill" style="width:74%;background:var(--re)"></div></div>
+        <div class="supply-amt" style="color:var(--re)">-23,400억</div>
+      </div>
+      <div class="supply-row">
+        <div class="supply-actor">기관</div>
+        <div class="supply-bg"><div class="supply-fill" style="width:28%;background:var(--re)"></div></div>
+        <div class="supply-amt" style="color:var(--re)">-8,700억</div>
+      </div>
+      <div class="supply-row">
+        <div class="supply-actor">개인</div>
+        <div class="supply-bg"><div class="supply-fill" style="width:100%;background:var(--gr)"></div></div>
+        <div class="supply-amt" style="color:var(--gr)">+31,200억</div>
+      </div>
+      <div class="supply-verdict">
+        <span>⚠</span>
+        <div><strong>기관·외국인 동반 매도 → 개인 흡수</strong> — 역사적 위험 신호. 분할 접근 권장.</div>
+      </div>
+    </div>
+
+    <!-- 종목 신호 -->
+    <div class="lower-panel">
+      <div class="lp-label">Zone 1C — 종목 신호 요약</div>
+      <div class="signal-cols">
+        <div class="signal-col">
+          <div class="sig-flag">🇰🇷</div>
+          <div class="sig-group">국내 Top 5 평균</div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px">
+            <div class="sig-score">7.8</div><div class="sig-max">/ 10</div>
+          </div>
+          <div class="sig-badges"><span class="sig-buy">매수 3</span><span class="sig-hold">관망 2</span></div>
+        </div>
+        <div class="signal-col">
+          <div class="sig-flag">🌐</div>
+          <div class="sig-group">해외 Top 5 평균</div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px">
+            <div class="sig-score">8.2</div><div class="sig-max">/ 10</div>
+          </div>
+          <div class="sig-badges"><span class="sig-buy">매수 4</span><span class="sig-hold">관망 1</span></div>
+        </div>
+      </div>
+      <div class="top1-row">
+        <span class="top1-rank">#1</span>
+        <div class="top1-info">
+          <div class="top1-name">SK하이닉스</div>
+          <div class="top1-why">EPS +492% · Fwd P/E 6.5x · HBM 독점</div>
+        </div>
+        <span class="top1-score">8.5</span>
+      </div>
+    </div>
+
+    <!-- 시장 국면 -->
+    <div class="lower-panel">
+      <div class="lp-label">시장 국면</div>
+      <div class="phase-big">
+        <div class="phase-label">현재 국면</div>
+        <div class="phase-name">강세장</div>
+        <div class="phase-detail">Drawdown 3.1% · VIX 18.2<br>EPS 성장 상위 + 모멘텀 필터 적용 중</div>
+      </div>
+      <div class="phase-metrics">
+        <div class="phase-m"><div class="pm-label">코스피 DD</div><div class="pm-val" style="color:var(--gr)">-3.1%</div></div>
+        <div class="phase-m"><div class="pm-label">나스닥 DD</div><div class="pm-val" style="color:var(--gr)">-2.8%</div></div>
+        <div class="phase-m"><div class="pm-label">F&amp;G</div><div class="pm-val" style="color:var(--ye)">59</div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pane-market -->
+
+
+<!-- ════════════════════════
+     종목 탭
+════════════════════════ -->
+<div class="pane" id="pane-stock">
+
+  <!-- 메트릭 바 재사용 -->
+  <div class="metric-bar">
+    <div class="metric-item">
+      <div><div class="mi-label">종목</div><div class="mi-val" style="color:var(--t1)">SK하이닉스</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">현재가</div><div class="mi-val">₩214,500</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">등락</div><div class="mi-val" style="color:var(--gr)">+1.42%</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">IQ 스코어</div><div class="mi-val" style="color:var(--ac)">8.5</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">시장 타이밍</div><div class="mi-val" style="color:var(--ye)">5.5</div></div>
+    </div>
+    <div class="metric-item">
+      <div><div class="mi-label">밸류에이션</div><div class="mi-val" style="color:var(--gr)">9.5</div></div>
+    </div>
+    <div class="metric-spacer"></div>
+    <div class="metric-status">
+      <div>
+        <div class="ms-verdict">매수 권장</div>
+        <div style="font-size:11px;color:var(--t4);margin-top:2px">강세장 · 분할 접근</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zone 4 헤더 -->
+  <div class="z4-header">
+    <div>
+      <div class="z4-name-row">
+        <div class="z4-name">SK하이닉스</div>
+        <div class="z4-ticker">000660</div>
+        <div class="z4-score-pill">8.5</div>
+      </div>
+      <div class="z4-price-row">
+        <div class="z4-price">₩214,500</div>
+        <div class="z4-chg" style="color:var(--gr)">+1.42% ↑</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-left:20px">
+          <div style="font-size:11px;color:var(--t4)">최고</div>
+          <div style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:6px;background:var(--grd);color:var(--gr);border:.5px solid var(--grb)">밸류에이션 9.5</div>
+          <div style="width:.5px;height:14px;background:var(--gb)"></div>
+          <div style="font-size:11px;color:var(--t4)">최저</div>
+          <div style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:6px;background:var(--yed);color:var(--ye);border:.5px solid var(--yeb)">시장 타이밍 5.5</div>
+        </div>
+      </div>
+    </div>
+    <div class="z4-right">
+      <div class="z4-ctd-link" onclick="switchTab('market',document.querySelector('.tb-tab'))">
+        CTD 체인 근거 보기 →
+      </div>
+      <div style="font-size:11px;color:var(--t4);margin-top:4px">강세장 · EPS 성장 상위 선별</div>
+    </div>
+  </div>
+
+  <!-- Zone 4 3열 콘텐츠 -->
+  <div class="z4-grid">
+
+    <!-- 좌: CTD 수평 체인 (방식 B) -->
+    <div class="z4-col">
+      <div class="z4-col-label">① 왜 이 종목인가 — CTD 체인</div>
+
+      <!-- 수평 노드 5개 -->
+      <div class="h-chain">
+        <div class="h-node" onclick="selectCtdNode(0)">
+          <div class="h-node-num">01</div>
+          <div class="h-node-text">AI CapEx<br>$700B+</div>
+          <span class="h-node-tag t-core">핵심</span>
+        </div>
+        <div class="h-arrow">→</div>
+        <div class="h-node" onclick="selectCtdNode(1)">
+          <div class="h-node-num">02</div>
+          <div class="h-node-text">HBM<br>공급 부족</div>
+          <span class="h-node-tag t-core">핵심</span>
+        </div>
+        <div class="h-arrow">→</div>
+        <div class="h-node on" onclick="selectCtdNode(2)">
+          <div class="h-node-num">03</div>
+          <div class="h-node-text">EPS<br>+492%</div>
+          <span class="h-node-tag t-bull">우호</span>
+        </div>
+        <div class="h-arrow">→</div>
+        <div class="h-node" onclick="selectCtdNode(3)">
+          <div class="h-node-num">04</div>
+          <div class="h-node-text">P/E<br>6.5x</div>
+          <span class="h-node-tag t-bull">저평가</span>
+        </div>
+        <div class="h-arrow">→</div>
+        <div class="h-node" onclick="selectCtdNode(4)">
+          <div class="h-node-num">결론</div>
+          <div class="h-node-text">분할<br>매수</div>
+          <span class="h-node-tag t-act">행동</span>
+        </div>
+      </div>
+
+      <!-- 선택 노드 상세 -->
+      <div class="h-detail" id="ctd-detail">
+        <div class="hd-header">
+          <div class="hd-num" id="ctd-num">03</div>
+          <div class="hd-title" id="ctd-title">EPS +492% 실적</div>
+        </div>
+        <div id="ctd-rows"></div>
+        <div class="hd-conclusion" id="ctd-conclusion"></div>
+      </div>
+
+      <div style="height:.5px;background:var(--gb);margin:4px 0 16px"></div>
+      <div class="z4-col-label">③ 투자 논거 유효성</div>
+      <div class="thesis-row">
+        <div class="th-icon">✅</div>
+        <div class="th-body"><div class="th-text">HBM 공급 부족 2028년까지</div><div class="th-date">2026.05.28 확인</div></div>
+        <div class="th-badge" style="background:var(--grd);color:var(--gr);border:.5px solid var(--grb)">유효</div>
+      </div>
+      <div class="thesis-row">
+        <div class="th-icon">✅</div>
+        <div class="th-body"><div class="th-text">EPS +492% > 주가 상승률</div><div class="th-date">2026.06.01 확인</div></div>
+        <div class="th-badge" style="background:var(--grd);color:var(--gr);border:.5px solid var(--grb)">유효</div>
+      </div>
+      <div class="thesis-row">
+        <div class="th-icon">⚠️</div>
+        <div class="th-body"><div class="th-text">외국인 대규모 매도 진행 중</div><div class="th-date">2026.06.03 갱신</div></div>
+        <div class="th-badge" style="background:var(--yed);color:var(--ye);border:.5px solid var(--yeb)">경고</div>
+      </div>
+      <div class="thesis-row">
+        <div class="th-icon">⚠️</div>
+        <div class="th-body"><div class="th-text">Stoch RSI 82 — 단기 과열</div><div class="th-date">2026.06.03 갱신</div></div>
+        <div class="th-badge" style="background:var(--yed);color:var(--ye);border:.5px solid var(--yeb)">경고</div>
+      </div>
+    </div>
+
+    <!-- 중: 레이더 -->
+    <div class="z4-col">
+      <div class="z4-col-label">② 8축 종합 평가 — 축 클릭 시 상세</div>
+      <div class="radar-row">
+        <svg id="rsvg" viewBox="0 0 260 240" width="260" height="240" style="overflow:visible;flex-shrink:0">
+          <defs><style>.rlbl{font-size:11px;fill:rgba(255,255,255,.42);font-family:'Inter',sans-serif;cursor:pointer;transition:fill .15s}.rlbl:hover{fill:#0a84ff}
+/* ── 수평 CTD 체인 (방식 B) ── */
+.h-chain {
+  display:flex; align-items:flex-start; gap:0;
+  padding:14px 16px; background:var(--g1);
+  border:.5px solid var(--gb); border-radius:10px;
+  margin-bottom:14px;
+}
+.h-node {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; gap:5px; cursor:pointer;
+  padding:4px 4px; border-radius:8px;
+  transition:background .15s; position:relative;
+}
+.h-node:hover { background:var(--g2); }
+.h-node.on { background:var(--acd); }
+.h-node-num {
+  font-size:9px; font-weight:600; color:var(--t4);
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.h-node.on .h-node-num { color:rgba(10,132,255,.5); }
+.h-node-text {
+  font-size:11px; font-weight:500; color:var(--t2);
+  text-align:center; line-height:1.35;
+}
+.h-node.on .h-node-text { color:var(--ac); }
+.h-node-tag {
+  font-size:9px; font-weight:500; padding:1px 5px;
+  border-radius:3px; white-space:nowrap;
+}
+.h-arrow {
+  color:var(--t4); font-size:14px; flex-shrink:0;
+  margin-top:16px; padding:0 2px;
+}
+
+/* 상세 패널 */
+.h-detail {
+  background:var(--acd); border:.5px solid var(--acb);
+  border-radius:10px; padding:12px 14px; margin-bottom:16px;
+}
+.hd-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.hd-num {
+  width:18px; height:18px; border-radius:50%;
+  background:rgba(10,132,255,.2); font-size:9px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--ac); flex-shrink:0;
+}
+.hd-title { font-size:12px; font-weight:600; color:var(--ac); }
+.hd-row {
+  display:flex; gap:7px; align-items:flex-start;
+  padding:4px 0; font-size:11px;
+}
+.hd-arr { color:rgba(10,132,255,.35); flex-shrink:0; margin-top:1px; }
+.hd-text { color:var(--t2); flex:1; line-height:1.45; }
+.hd-tag {
+  font-size:9px; font-weight:500; padding:1px 5px;
+  border-radius:3px; white-space:nowrap; flex-shrink:0;
+}
+.hd-conclusion {
+  margin-top:8px; padding:8px 10px;
+  background:rgba(10,132,255,.1); border-radius:6px;
+  font-size:11px; color:var(--t2); line-height:1.55;
+}
+.hd-conclusion strong { color:var(--ac); font-weight:500; }
+
+</style></defs>
+          <g id="rg"></g><g id="ra"></g>
+          <polygon id="rpoly" fill="rgba(10,132,255,.1)" stroke="#0a84ff" stroke-width="1.5" stroke-linejoin="round"/>
+          <g id="rdots"></g><g id="rlbls"></g>
+        </svg>
+        <div class="radar-legend-v" id="rlegend"></div>
+      </div>
+      <div class="drill-panel" id="dpanel">
+        <div class="drill-head">
+          <div class="drill-title" id="dtitle"></div>
+          <div class="drill-close" onclick="closeDrill()">닫기 ×</div>
+        </div>
+        <div id="drows"></div>
+        <div class="drill-insight" id="dinsight"></div>
+      </div>
+    </div>
+
+    <!-- 우: 매수 플랜 -->
+    <div class="z4-col">
+      <div class="z4-col-label">④ 언제 사고 팔 것인가</div>
+      <div class="range-outer">
+        <div class="range-bg"></div>
+        <div class="range-seg" style="left:0;width:17%;background:rgba(191,90,242,.25)"></div>
+        <div class="range-seg" style="left:17%;width:18%;background:rgba(48,209,88,.2)"></div>
+        <div class="range-seg" style="left:35%;width:21%;background:rgba(10,132,255,.25)"></div>
+        <div class="range-marker" style="left:47%">
+          <div class="marker-dot"></div>
+          <div class="marker-lbl">₩214,500</div>
+        </div>
+      </div>
+      <div class="range-axis"><span>130만</span><span>170만</span><span>200만</span><span>240만</span></div>
+      <div class="range-zones" style="margin-bottom:16px">
+        <div class="rz" style="width:17%;color:rgba(191,90,242,.7)">2차급락</div>
+        <div class="rz" style="width:18%;color:rgba(48,209,88,.7)">1차조정</div>
+        <div class="rz" style="width:21%;color:rgba(10,132,255,.8)">지금</div>
+      </div>
+      <table class="plan-tbl">
+        <thead><tr><th>구간</th><th>가격대</th><th>비중</th><th>전략</th></tr></thead>
+        <tbody>
+          <tr class="now-r">
+            <td><span class="ph-tag" style="background:var(--acd);color:var(--ac);border:.5px solid var(--acb)">지금</span></td>
+            <td>200~240만</td><td>30%</td><td style="color:var(--t4)">분할 시작</td>
+          </tr>
+          <tr>
+            <td><span class="ph-tag" style="background:var(--grd);color:var(--gr);border:.5px solid var(--grb)">1차 조정</span></td>
+            <td>170~200만</td><td>40%</td><td style="color:var(--t4)">적극 매수</td>
+          </tr>
+          <tr>
+            <td><span class="ph-tag" style="background:var(--pud);color:var(--pu);border:.5px solid var(--pub)">2차 급락</span></td>
+            <td>130~170만</td><td>30%</td><td style="color:var(--t4)">공격 매수</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="target-row">
+        <div class="tl"><div class="tl-l">목표가</div><div class="tl-s">KB증권 컨센서스</div></div>
+        <div>
+          <div class="target-v">₩380만</div>
+          <div style="display:flex;gap:6px;margin-top:4px;justify-content:flex-end">
+            <span style="font-size:10px;color:var(--t4)">세전 +77%</span>
+            <span style="font-size:10px;font-weight:500;padding:1px 7px;border-radius:4px;background:var(--acd);color:var(--ac);border:.5px solid var(--acb)">세후 +77%</span>
+          </div>
+        </div>
+      </div>
+      <div class="stop-row">
+        <div class="sl"><div class="sl-l">손절 기준</div><div class="sl-r">120일 이동평균선</div></div>
+        <div class="stop-v">₩160만</div>
+      </div>
+      <div class="tax-row"><div class="tax-l">양도소득세</div><div class="tax-v">0% — 국내주식 비과세</div></div>
+      <div class="after-tax-compare">
+        <div class="atc-col kr">
+          <div class="atc-tag">🇰🇷 국내 · 양도세 0%</div>
+          <div class="atc-return" style="color:var(--gr)">+77.3%</div>
+          <div class="atc-after" style="color:var(--gr)">세후 = 세전</div>
+          <div class="atc-winner">세후 우위</div>
+        </div>
+        <div class="atc-col us">
+          <div class="atc-tag">🌐 해외 · 양도세 22%</div>
+          <div class="atc-return" style="color:var(--ye)">+60.3%</div>
+          <div class="atc-after" style="color:var(--t4)">세후 -17%p</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /z4-grid -->
+</div><!-- /pane-stock -->
+
+
+<!-- ════════════════════════
+     나의 투자 탭
+════════════════════════ -->
+<div class="pane" id="pane-myinvest">
+  <div class="myinvest-grid">
+
+    <!-- 좌: 포트폴리오 + AI -->
+    <div class="mi-panel">
+      <div class="mi-panel-label">포트폴리오 현황 — 세후 기준 자동 계산</div>
+      <div class="mi-stat-row">
+        <div class="mi-stat"><div class="mi-stat-num" style="color:var(--gr)">+18.4%</div><div class="mi-stat-lbl">총 세후 수익률</div></div>
+        <div class="mi-stat"><div class="mi-stat-num">1.2억</div><div class="mi-stat-lbl">총 투자금</div></div>
+        <div class="mi-stat"><div class="mi-stat-num" style="color:var(--gr)">+2,208만</div><div class="mi-stat-lbl">평가 수익</div></div>
+        <div class="mi-stat"><div class="mi-stat-num" style="color:var(--ye)">+142만</div><div class="mi-stat-lbl">예상 세금</div></div>
+      </div>
+      <div class="alloc-row">
+        <div><div class="alloc-name">SK하이닉스</div><div class="alloc-sub">국내</div></div>
+        <div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:40%;background:var(--ac)"></div></div>
+        <div class="alloc-pct" style="color:var(--ac)">40%</div>
+        <span class="alloc-tax-badge" style="background:var(--grd);color:var(--gr);border:.5px solid var(--grb)">세후 = 세전</span>
+      </div>
+      <div class="alloc-row">
+        <div><div class="alloc-name">NVDA</div><div class="alloc-sub">해외</div></div>
+        <div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:30%;background:var(--pu)"></div></div>
+        <div class="alloc-pct" style="color:var(--pu)">30%</div>
+        <span class="alloc-tax-badge" style="background:var(--red);color:var(--re);border:.5px solid var(--reb)">세금 22%</span>
+      </div>
+      <div class="alloc-row">
+        <div><div class="alloc-name">삼성전자</div><div class="alloc-sub">국내</div></div>
+        <div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:20%;background:var(--gr)"></div></div>
+        <div class="alloc-pct" style="color:var(--gr)">20%</div>
+        <span class="alloc-tax-badge" style="background:var(--grd);color:var(--gr);border:.5px solid var(--grb)">세후 = 세전</span>
+      </div>
+      <div class="alloc-row">
+        <div><div class="alloc-name">현금</div><div class="alloc-sub">대기</div></div>
+        <div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:10%;background:var(--t3)"></div></div>
+        <div class="alloc-pct" style="color:var(--t3)">10%</div>
+        <span class="alloc-tax-badge" style="background:var(--g1);color:var(--t3);border:.5px solid var(--gb)">해당없음</span>
+      </div>
+
+      <div style="height:.5px;background:var(--gb);margin:28px 0"></div>
+      <div class="mi-panel-label" style="border-bottom:none;padding-bottom:0;margin-bottom:16px">AI 투자 분석</div>
+      <div class="ai-input-box">
+        <div class="ai-placeholder">현재 포트폴리오와 시장 데이터를 바탕으로 분석을 요청하세요</div>
+        <div style="background:var(--g2);border:.5px solid var(--gb);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--t4);margin-bottom:12px">질문을 입력하세요...</div>
+        <div class="ai-examples">
+          <div class="ai-ex">해외 비중을 줄여야 할까요? <span class="ai-arrow">↗</span></div>
+          <div class="ai-ex">SK하이닉스 추가 매수 타이밍인가요? <span class="ai-arrow">↗</span></div>
+          <div class="ai-ex">올해 양도세 절세 전략을 추천해주세요 <span class="ai-arrow">↗</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 우: 세금 계산기 -->
+    <div class="mi-panel">
+      <div class="mi-panel-label">양도소득세 계산기</div>
+      <div class="tax-calc">
+        <div class="tc-input-row"><div class="tc-label">매수가</div><div class="tc-input">$1,000</div></div>
+        <div class="tc-input-row"><div class="tc-label">목표 매도가</div><div class="tc-input">$1,400</div></div>
+        <div class="tc-input-row"><div class="tc-label">보유 수량</div><div class="tc-input">100주</div></div>
+        <div class="tc-input-row"><div class="tc-label">매수 환율</div><div class="tc-input">1,380원</div></div>
+        <div class="tc-input-row"><div class="tc-label">매도 환율 (예상)</div><div class="tc-input">1,350원</div></div>
+        <div class="tc-result">
+          <div class="tc-result-lbl">예상 납부 세금 (해외주식 22%)</div>
+          <div class="tc-result-num">1,188만원</div>
+          <div class="tc-result-desc">세전 수익 +5,400만원 → 세후 +4,212만원<br>환율 손익 포함 원화 환산 기준</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /pane-myinvest -->
+
+</div><!-- /main -->
+</div><!-- /app-body -->
+
+<script>
+/* ─── 레이더 데이터 ─── */
+const axes=[
+  {s:'품질', v:9.2, c:'#0a84ff', cat:'quality'},
+  {s:'성장', v:8.8, c:'#30d158', cat:'growth'},
+  {s:'밸류', v:9.5, c:'#bf5af2', cat:'value'},
+  {s:'타이밍',v:5.5, c:'#ffd60a', cat:'timing'},
+  {s:'재무', v:8.0, c:'#0a84ff', cat:'finance'},
+  {s:'매크로',v:7.5, c:'#30d158', cat:'macro'},
+  {s:'리스크',v:6.5, c:'#ffd60a', cat:'risk'},
+  {s:'세후',  v:9.0, c:'#bf5af2', cat:'tax'},
+];
+const DRILLS={
+  value:{title:'밸류에이션 상세 — 8개 지표',rows:[
+    {n:'P/E Forward',v:'6.5x',c:'#30d158',s:'극저평가'},
+    {n:'P/E Trailing',v:'15.2x',c:'#30d158',s:'우호'},
+    {n:'PEG Ratio',v:'0.42',c:'#30d158',s:'성장 대비 저평'},
+    {n:'EV/EBITDA',v:'12.3x',c:'#30d158',s:'섹터 하위'},
+    {n:'DCF 내재가치',v:'₩280만',c:'#30d158',s:'+34% 업사이드'},
+    {n:'EV/Revenue',v:'3.1x',c:'#ffd60a',s:'보통'},
+    {n:'NAV/P-Book',v:'1.8x',c:'#ffd60a',s:'적정'},
+    {n:'시가총액',v:'156조',c:'#0a84ff',s:'대형주'},
+  ],insight:'Fwd P/E 6.5x는 HBM 반도체 중 <strong>글로벌 최저 수준</strong>. EPS +492%가 주가를 크게 앞서는 구간.'},
+  timing:{title:'시장 타이밍 상세 — 기술적 6개',rows:[
+    {n:'RSI (14일)',v:'67.3',c:'#ffd60a',s:'과매수 근접'},
+    {n:'Stoch RSI',v:'82',c:'#ff453a',s:'과매수'},
+    {n:'볼린저 밴드',v:'상단 근접',c:'#ffd60a',s:'과열 주의'},
+    {n:'MA50',v:'₩198만',c:'#30d158',s:'위'},
+    {n:'MA200',v:'₩172만',c:'#30d158',s:'골든크로스'},
+    {n:'Beta',v:'1.45',c:'#ffd60a',s:'고변동성'},
+  ],insight:'기술적 지표 과열권. <strong>RSI·Stoch RSI 모두 경고</strong>. 분할 매수의 핵심 근거.'},
+  growth:{title:'성장 모멘텀 상세 — 7개',rows:[
+    {n:'EPS GAAP YoY',v:'+492%',c:'#30d158',s:'최상위'},
+    {n:'매출 YoY',v:'+62%',c:'#30d158',s:'강세'},
+    {n:'Gross Margin',v:'56.3%',c:'#30d158',s:'개선중'},
+    {n:'FCF',v:'+12조',c:'#30d158',s:'풍부'},
+    {n:'AI CapEx 수혜',v:'직접',c:'#30d158',s:'1차 수혜'},
+    {n:'영업이익률',v:'38.2%',c:'#30d158',s:'최상위'},
+  ],insight:'HBM3E 독점으로 <strong>EPS 추정치 상향 사이클</strong> 지속.'},
+  quality:{title:'비즈니스 품질 상세',rows:[
+    {n:'영업이익률',v:'38.2%',c:'#30d158',s:'최상위'},
+    {n:'Gross Margin',v:'56.3%',c:'#30d158',s:'개선'},
+    {n:'FCF 마진',v:'31%',c:'#30d158',s:'풍부'},
+    {n:'시장 점유율',v:'HBM 50%+',c:'#30d158',s:'독점'},
+  ],insight:'<strong>HBM 과점 지위</strong>로 가격 결정력 보유.'},
+  finance:{title:'재무 건전성 상세',rows:[
+    {n:'부채비율',v:'42%',c:'#30d158',s:'양호'},
+    {n:'유동비율',v:'2.1x',c:'#30d158',s:'안전'},
+    {n:'현금성 자산',v:'18조',c:'#30d158',s:'충분'},
+    {n:'FCF',v:'+12조',c:'#30d158',s:'풍부'},
+  ],insight:'사이클 저점 대비 <strong>재무구조 크게 개선</strong>.'},
+  macro:{title:'매크로 연계 상세',rows:[
+    {n:'외국인 수급',v:'-2.3조',c:'#ff453a',s:'차익실현'},
+    {n:'기관 수급',v:'-8,700억',c:'#ff453a',s:'매도'},
+    {n:'AI CapEx 연계',v:'직접',c:'#30d158',s:'$700B+'},
+    {n:'반도체 사이클',v:'상승기',c:'#30d158',s:'HBM 중심'},
+    {n:'장단기금리차',v:'역전 해소',c:'#30d158',s:'긍정'},
+  ],insight:'외국인 매도는 <strong>차익실현</strong>. AI CapEx 연계 여전히 강력.'},
+  risk:{title:'리스크 관리 상세',rows:[
+    {n:'VIX',v:'18.2',c:'#30d158',s:'안정'},
+    {n:'SKEW 지수',v:'134',c:'#ffd60a',s:'테일리스크'},
+    {n:'Put/Call',v:'0.82',c:'#ffd60a',s:'헤지 증가'},
+    {n:'Beta',v:'1.45',c:'#ffd60a',s:'고변동성'},
+  ],insight:'시장 안정적이나 <strong>SKEW 테일리스크</strong> 포착.'},
+  tax:{title:'세후 수익률 상세',rows:[
+    {n:'양도소득세',v:'0%',c:'#30d158',s:'비과세'},
+    {n:'배당소득세',v:'15.4%',c:'#ffd60a',s:'원천징수'},
+    {n:'ISA 활용',v:'가능',c:'#30d158',s:'절세 가능'},
+    {n:'세후 목표수익률',v:'+77%',c:'#30d158',s:'₩380만 기준'},
+  ],insight:'국내 종목 <strong>양도세 0% → 해외 대비 결정적 우위</strong>.'},
+};
+
+const CX=130,CY=120,R=92,N=8;
+function buildRadar(){
+  const rg=document.getElementById('rg'),ra=document.getElementById('ra');
+  const rd=document.getElementById('rdots'),rl=document.getElementById('rlbls');
+  [2,4,6,8,10].forEach(v=>{
+    const r=(v/10)*R,pts=axes.map((_,i)=>{const a=(i/N)*2*Math.PI-Math.PI/2;return`${CX+r*Math.cos(a)},${CY+r*Math.sin(a)}`}).join(' ');
+    const p=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    p.setAttribute('points',pts);p.setAttribute('fill','none');p.setAttribute('stroke','rgba(255,255,255,.07)');p.setAttribute('stroke-width','0.5');rg.appendChild(p);
+  });
+  axes.forEach((ax,i)=>{
+    const a=(i/N)*2*Math.PI-Math.PI/2;
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',CX);l.setAttribute('y1',CY);l.setAttribute('x2',CX+R*Math.cos(a));l.setAttribute('y2',CY+R*Math.sin(a));
+    l.setAttribute('stroke','rgba(255,255,255,.08)');l.setAttribute('stroke-width','0.5');ra.appendChild(l);
+    const r=(ax.v/10)*R,dx=CX+r*Math.cos(a),dy=CY+r*Math.sin(a);
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',dx);c.setAttribute('cy',dy);c.setAttribute('r','3.5');
+    c.setAttribute('fill',ax.c);c.setAttribute('stroke','#000');c.setAttribute('stroke-width','1.5');
+    c.style.cursor='pointer';c.addEventListener('click',()=>openDrill(ax.cat,i));rd.appendChild(c);
+    const lx=CX+(R+16)*Math.cos(a),ly=CY+(R+16)*Math.sin(a);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',lx);t.setAttribute('y',ly);
+    t.setAttribute('text-anchor',Math.cos(a)>0.1?'start':Math.cos(a)<-0.1?'end':'middle');
+    t.setAttribute('dominant-baseline','central');t.setAttribute('class','rlbl');
+    t.setAttribute('id','rlbl'+i);t.textContent=ax.s;
+    t.addEventListener('click',()=>openDrill(ax.cat,i));rl.appendChild(t);
+  });
+  const pts=axes.map((ax,i)=>{const a=(i/N)*2*Math.PI-Math.PI/2;const r=(ax.v/10)*R;return`${CX+r*Math.cos(a)},${CY+r*Math.sin(a)}`}).join(' ');
+  document.getElementById('rpoly').setAttribute('points',pts);
+  const lg=document.getElementById('rlegend');lg.innerHTML='';
+  axes.forEach((ax,i)=>{
+    const row=document.createElement('div');row.className='rl-row';
+    row.onclick=()=>openDrill(ax.cat,i);
+    row.innerHTML=`<div class="rl-dot" style="background:${ax.c}"></div><div class="rl-name" style="flex:1">${ax.s}</div><div class="rl-bar"><div class="rl-fill" style="width:${ax.v*10}%;background:${ax.c}"></div></div><div class="rl-val" style="color:${ax.c};min-width:28px;text-align:right">${ax.v}</div>`;
+    lg.appendChild(row);
+  });
+}
+
+function openDrill(cat,idx){
+  const d=DRILLS[cat];if(!d)return;
+  document.querySelectorAll('.rlbl').forEach(l=>l.style.fill='');
+  const lbl=document.getElementById('rlbl'+idx);if(lbl)lbl.style.fill='#0a84ff';
+  document.getElementById('dtitle').textContent=d.title;
+  document.getElementById('drows').innerHTML=d.rows.map(r=>`<div class="drill-row"><span class="drill-name">${r.n}</span><span class="drill-val" style="color:${r.c}">${r.v}</span><span class="drill-sig" style="background:${r.c}18;color:${r.c};border:.5px solid ${r.c}44">${r.s}</span></div>`).join('');
+  document.getElementById('dinsight').innerHTML=d.insight;
+  document.getElementById('dpanel').classList.add('open');
+}
+function closeDrill(){
+  document.getElementById('dpanel').classList.remove('open');
+  document.querySelectorAll('.rlbl').forEach(l=>l.style.fill='');
+}
+
+function switchTab(id,btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb-tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pane-'+id).classList.add('on');
+  if(btn instanceof Element) btn.classList.add('on');
+  else document.querySelectorAll('.tb-tab')[id==='market'?0:id==='stock'?1:2].classList.add('on');
+  // 사이드바 전환
+  document.getElementById('sb-market').style.display=id==='market'?'':'none';
+  document.getElementById('sb-stock').style.display=id==='stock'?'':'none';
+  document.getElementById('sb-myinvest').style.display=id==='myinvest'?'':'none';
+}
+
+function toggleStep(id){
+  document.querySelectorAll('.sb-ctd-step').forEach(s=>{if(s.id!==id)s.classList.remove('on');});
+  document.getElementById(id).classList.toggle('on');
+}
+function selectStock(el){
+  document.querySelectorAll('.sb-stock-row').forEach(r=>r.classList.remove('on'));
+  el.classList.add('on');
+}
+
+
+/* ── CTD 수평 체인 데이터 ── */
+const CTD_NODES = [
+  {
+    num:'01', title:'AI CapEx $700B+ 배경',
+    rows:[
+      {t:'글로벌 AI 인프라 투자 $700B+ 집행 확정', tag:'핵심', cls:'t-core'},
+      {t:'빅테크 CapEx 전년比 40%+ 증가세 지속', tag:'강세', cls:'t-bull'},
+      {t:'NVDA·AMD AI 칩 수요 — HBM 직접 수혜', tag:'강세', cls:'t-bull'},
+    ],
+    conc:'AI 투자 사이클이 <strong>구조적 상승기</strong> 진입. HBM 수요의 1차 원인.'
+  },
+  {
+    num:'02', title:'HBM 공급 부족 구조',
+    rows:[
+      {t:'HBM 생산 가능: SK하이닉스·삼성·마이크론 3사만', tag:'핵심', cls:'t-core'},
+      {t:'2028년까지 수요 > 공급 구조적 확정', tag:'핵심', cls:'t-core'},
+      {t:'SK하이닉스 HBM3E 시장 점유율 50%+ 독점', tag:'강세', cls:'t-bull'},
+    ],
+    conc:'공급 과잉 불가능한 구조. <strong>가격 결정력 완전 보유</strong>.'
+  },
+  {
+    num:'03', title:'EPS +492% 실적',
+    rows:[
+      {t:'EPS GAAP YoY +492% — 반도체 섹터 1위', tag:'최상위', cls:'t-bull'},
+      {t:'매출 YoY +62% — AI 서버 수요 직접 반영', tag:'강세', cls:'t-bull'},
+      {t:'Gross Margin 56.3% — HBM 가격 프리미엄', tag:'개선중', cls:'t-bull'},
+    ],
+    conc:'EPS 성장이 주가 상승을 <strong>크게 앞서는 구간</strong>. 실적 기반 버블 아님.'
+  },
+  {
+    num:'04', title:'Fwd P/E 6.5x 저평가',
+    rows:[
+      {t:'Fwd P/E 6.5x — HBM 반도체 중 글로벌 최저', tag:'극저평가', cls:'t-bull'},
+      {t:'PEG 0.42 — 성장 대비 극단적 저평가', tag:'저평가', cls:'t-bull'},
+      {t:'DCF 내재가치 ₩280만 — 현재가 대비 34% 업사이드', tag:'우호', cls:'t-bull'},
+    ],
+    conc:'EPS +492% 성장인데 P/E 6.5x. <strong>시장이 아직 충분히 반영 못한 상태</strong>.'
+  },
+  {
+    num:'결론', title:'분할 매수 실행',
+    rows:[
+      {t:'현재 구간 ₩200~240만 — 비중 30% 분할 시작', tag:'행동', cls:'t-act'},
+      {t:'1차 조정 ₩170~200만 — 비중 40% 적극 매수', tag:'행동', cls:'t-act'},
+      {t:'Stoch RSI 82 과열 — 한 번에 전부 매수 금지', tag:'경고', cls:'t-warn'},
+    ],
+    conc:'강세장 국면 + EPS 우위 확인. <strong>분할 3단계 실행 권장</strong>.'
+  },
+];
+const tagStyleMap = {
+  't-core':'background:var(--acd);color:var(--ac);border:.5px solid var(--acb)',
+  't-bull':'background:var(--grd);color:var(--gr);border:.5px solid var(--grb)',
+  't-warn':'background:var(--yed);color:var(--ye);border:.5px solid var(--yeb)',
+  't-act':'background:var(--ord);color:var(--or);border:.5px solid rgba(255,159,10,.2)',
+};
+function selectCtdNode(idx) {
+  document.querySelectorAll('.h-node').forEach((n,i) => n.classList.toggle('on', i===idx));
+  const d = CTD_NODES[idx];
+  document.getElementById('ctd-num').textContent = d.num;
+  document.getElementById('ctd-title').textContent = d.title;
+  document.getElementById('ctd-rows').innerHTML = d.rows.map(r =>
+    `<div class="hd-row"><span class="hd-arr">→</span><span class="hd-text">${r.t}</span><span class="hd-tag" style="${tagStyleMap[r.cls]}">${r.tag}</span></div>`
+  ).join('');
+  document.getElementById('ctd-conclusion').innerHTML = d.conc;
+}
+/* 초기 03번 노드 렌더 */
+selectCtdNode(2);
+
+buildRadar();
+</script>
+</body>
+</html>
