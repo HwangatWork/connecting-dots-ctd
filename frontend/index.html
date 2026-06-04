@@ -1182,7 +1182,7 @@ const API_BASE = (typeof CTD_API_BASE !== 'undefined' ? CTD_API_BASE : '')
       return 'http://' + h + ':8000/api/v1';           // 로컬 / 같은 WiFi
     if (window.location.protocol === 'file:')
       return 'http://localhost:8000/api/v1';            // 파일 직접 열기
-    return 'https://ctd-api-hwangat.onrender.com/api/v1'; // Netlify 배포
+    return 'https://connecting-dots-ctd.onrender.com/api/v1'; // Netlify 배포
   })();
 
 async function apiFetch(path, fallback = null) {
