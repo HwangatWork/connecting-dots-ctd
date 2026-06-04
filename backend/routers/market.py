@@ -1,8 +1,8 @@
 from fastapi import APIRouter
-from backend.services.market_service import build_market_response
-from backend.config import CACHE_TTL
-from backend.cache import cache
-from backend.schemas import MarketResponse
+fromservices.market_service import build_market_response
+fromconfig import CACHE_TTL
+fromcache import cache
+fromschemas import MarketResponse
 
 router = APIRouter()
 

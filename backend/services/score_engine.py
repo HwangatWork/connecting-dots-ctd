@@ -187,7 +187,7 @@ def calculate_market_temperature(macro: dict, supply: dict) -> int:
     """
     시장 종합 온도 계산 (0~100).
     """
-    from backend.config import TEMPERATURE_WEIGHTS
+    fromconfig import TEMPERATURE_WEIGHTS
 
     fg = macro.get("fear_greed", 50)
 

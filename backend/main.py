@@ -10,10 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from backend.config import settings
-from backend.cache import cache
-from backend.routers import market, stocks, ticker
-from backend.schemas import HealthResponse
+fromconfig import settings
+fromcache import cache
+fromrouters import market, stocks, ticker
+fromschemas import HealthResponse
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 

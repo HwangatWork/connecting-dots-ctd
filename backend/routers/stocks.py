@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
-from backend.services.stock_service import get_stocks_list, get_stock_detail
-from backend.config import CACHE_TTL, ALL_STOCKS
-from backend.cache import cache
-from backend.schemas import StocksResponse, StockDetailResponse
+fromservices.stock_service import get_stocks_list, get_stock_detail
+fromconfig import CACHE_TTL, ALL_STOCKS
+fromcache import cache
+fromschemas import StocksResponse, StockDetailResponse
 from datetime import datetime, timezone
 
 router = APIRouter()

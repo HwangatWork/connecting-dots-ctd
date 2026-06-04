@@ -5,12 +5,12 @@ yfinance + pykrx 데이터 → StockDetailResponse 빌드.
 from datetime import datetime, timezone
 import logging
 
-from backend.providers import yahoo_finance as yf_p
-from backend.providers import krx as krx_p
-from backend.services import technical as ta
-from backend.services.score_engine import calculate_iq_score
-from backend.config import ALL_STOCKS, RADAR_AXES
-from backend.schemas import (
+fromproviders import yahoo_finance as yf_p
+fromproviders import krx as krx_p
+fromservices import technical as ta
+fromservices.score_engine import calculate_iq_score
+fromconfig import ALL_STOCKS, RADAR_AXES
+fromschemas import (
     StockDetailResponse, StockHeader, StockListItem,
     RadarData, ValidityRow, BuyPlan, BuyLevel, AfterTax,
     DrillData, DrillRow, CTDNode, CTDRow,

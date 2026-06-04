@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 from datetime import datetime, timezone
 
-from backend.providers import yahoo_finance as yf_p
-from backend.providers import krx as krx_p
-from backend.config import INDEX_SYMBOLS, CACHE_TTL
-from backend.cache import cache
-from backend.schemas import TickerResponse, TickerItem
+fromproviders import yahoo_finance as yf_p
+fromproviders import krx as krx_p
+fromconfig import INDEX_SYMBOLS, CACHE_TTL
+fromcache import cache
+fromschemas import TickerResponse, TickerItem
 
 router = APIRouter()
 
