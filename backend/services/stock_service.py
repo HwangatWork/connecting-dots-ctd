@@ -3,6 +3,7 @@ Stock service — assembles Zone 4 full stock detail response.
 Collects data from yfinance + pykrx and builds StockDetailResponse.
 """
 from datetime import datetime, timezone
+from typing import Optional
 import logging
 
 from providers import yahoo_finance as yf_p
