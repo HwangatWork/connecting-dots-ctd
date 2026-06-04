@@ -1174,9 +1174,16 @@ a { color:inherit; text-decoration:none; }
 /* ═══════════════════════════════════
    API CONFIG
 ═══════════════════════════════════ */
-// 상대경로 사용 → PC/폰/배포 환경 모두 자동 대응
+// 환경별 API URL 자동 선택
 const API_BASE = (typeof CTD_API_BASE !== 'undefined' ? CTD_API_BASE : '')
-  || (window.location.protocol !== 'file:' ? '/api/v1' : 'http://localhost:8000/api/v1');
+  || (() => {
+    const h = window.location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h.startsWith('192.168'))
+      return 'http://' + h + ':8000/api/v1';           // 로컬 / 같은 WiFi
+    if (window.location.protocol === 'file:')
+      return 'http://localhost:8000/api/v1';            // 파일 직접 열기
+    return 'https://ctd-api-hwangat.onrender.com/api/v1'; // Netlify 배포
+  })();
 
 async function apiFetch(path, fallback = null) {
   try {

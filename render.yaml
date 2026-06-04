@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ctd-api
+    name: ctd-api-hwangat
     runtime: python
     region: singapore          # 한국 지연 최소화
     plan: free
