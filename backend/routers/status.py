@@ -162,12 +162,12 @@ async def get_data_status():
     """Return 64-indicator collection status grouped by category."""
     resolved = [_resolve_indicator(ind) for ind in INDICATOR_CATALOG]
 
-    # summary counts
+    # summary counts — hardcoded counted separately to avoid double-count
     total = len(resolved)
-    real     = sum(1 for r in resolved if r["status"] in ("정상",))
-    fallback = sum(1 for r in resolved if r["status"] == "폴백")
-    uncoll   = sum(1 for r in resolved if r["status"] == "미수집")
     hardcoded = sum(1 for r in resolved if r["status_type"] == "hardcoded")
+    real      = sum(1 for r in resolved if r["status"] == "정상" and r["status_type"] != "hardcoded")
+    fallback  = sum(1 for r in resolved if r["status"] == "폴백")
+    uncoll    = sum(1 for r in resolved if r["status"] == "미수집")
 
     real_ratio = round((real + hardcoded) / total * 100, 1)
 
