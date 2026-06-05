@@ -8,6 +8,7 @@ import yfinance as yf
 import pandas as pd
 from typing import Optional
 import logging
+import data_registry as dr
 
 log = logging.getLogger(__name__)
 
@@ -36,9 +37,12 @@ def get_ticker_info(symbol: str) -> dict:
     try:
         t = yf.Ticker(symbol)
         result = _retry(lambda: t.info)
-        return result or {}
+        r = result or {}
+        dr.record(f"info_{symbol}", "Yahoo Finance", not bool(r))
+        return r
     except Exception as e:
         log.warning(f"[YF] info failed for {symbol}: {e}")
+        dr.record(f"info_{symbol}", "Yahoo Finance", True)
         return {}
 
 
@@ -54,11 +58,14 @@ def get_price_history(symbol: str, period: str = "6mo", interval: str = "1d") ->
             auto_adjust=True,
         )
         if df is None or df.empty:
+            dr.record(f"hist_{symbol}", "Yahoo Finance", True)
             return None
         time.sleep(_DELAY)
+        dr.record(f"hist_{symbol}", "Yahoo Finance", False, f"{len(df)} rows")
         return df
     except Exception as e:
         log.warning(f"[YF] history failed for {symbol}: {e}")
+        dr.record(f"hist_{symbol}", "Yahoo Finance", True)
         return None
 
 
@@ -82,9 +89,13 @@ def get_current_prices(symbols: list[str]) -> dict[str, dict]:
                     "change_pct": round(chg, 2),
                     "up": chg >= 0,
                 }
+                dr.record(f"yf_{sym}", "Yahoo Finance", False, f"{last:.4g}")
+            else:
+                dr.record(f"yf_{sym}", "Yahoo Finance", True)
             time.sleep(_DELAY)
         except Exception as e:
             log.warning(f"[YF] price failed for {sym}: {e}")
+            dr.record(f"yf_{sym}", "Yahoo Finance", True)
     return result
 
 

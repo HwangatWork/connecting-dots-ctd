@@ -5,6 +5,7 @@ pykrx provider — 한국거래소 무료 데이터.
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
+import data_registry as dr
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ def get_market_indices() -> dict:
                 "change_pct": round(chg, 2),
                 "up": chg >= 0,
             }
+            dr.record("krx_kospi", "pykrx", False, f"{row['종가']:.0f}")
+        else:
+            dr.record("krx_kospi", "pykrx", True)
         if not kosdaq.empty:
             row = kosdaq.iloc[-1]
             prev = kosdaq.iloc[-2] if len(kosdaq) > 1 else None
@@ -46,8 +50,13 @@ def get_market_indices() -> dict:
                 "change_pct": round(chg, 2),
                 "up": chg >= 0,
             }
+            dr.record("krx_kosdaq", "pykrx", False, f"{row['종가']:.0f}")
+        else:
+            dr.record("krx_kosdaq", "pykrx", True)
     except Exception as e:
         log.warning(f"[KRX] indices failed: {e}")
+        dr.record("krx_kospi", "pykrx", True)
+        dr.record("krx_kosdaq", "pykrx", True)
     return result
 
 
@@ -81,8 +90,14 @@ def get_supply_data(days: int = 20) -> dict:
             "institution": {"amount": fmt(institution_sum), "direction": 1 if institution_sum >= 0 else -1, "pct": min(100, abs(institution_sum) // 100)},
             "individual":  {"amount": fmt(individual_sum),  "direction": 1 if individual_sum >= 0 else -1,  "pct": min(100, abs(individual_sum) // 100)},
         }
+        dr.record("krx_foreign", "pykrx", False, fmt(foreign_sum))
+        dr.record("krx_institution", "pykrx", False, fmt(institution_sum))
+        dr.record("krx_individual", "pykrx", False, fmt(individual_sum))
     except Exception as e:
         log.warning(f"[KRX] supply failed: {e}")
+        dr.record("krx_foreign", "pykrx", True)
+        dr.record("krx_institution", "pykrx", True)
+        dr.record("krx_individual", "pykrx", True)
     return result
 
 

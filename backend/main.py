@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 
 from config import settings
 from cache import cache
-from routers import market, stocks, ticker
+from routers import market, stocks, ticker, status
 from schemas import HealthResponse
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -38,6 +38,7 @@ PREFIX = settings.api_v1_prefix
 app.include_router(ticker.router, prefix=PREFIX, tags=["ticker"])
 app.include_router(market.router, prefix=PREFIX, tags=["market"])
 app.include_router(stocks.router, prefix=PREFIX, tags=["stocks"])
+app.include_router(status.router, prefix=PREFIX, tags=["status"])
 
 
 # Health check

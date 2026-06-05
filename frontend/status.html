@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CTD 데이터 상태</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:  #000;
+  --l1:  #0a0a0a;
+  --l2:  #111113;
+  --l3:  #1a1a1c;
+  --g1:  rgba(255,255,255,.04);
+  --g2:  rgba(255,255,255,.07);
+  --g3:  rgba(255,255,255,.12);
+  --gb:  rgba(255,255,255,.08);
+  --t1:  rgba(255,255,255,1);
+  --t2:  rgba(255,255,255,0.62);
+  --t3:  rgba(255,255,255,0.36);
+  --ac:  #0a84ff;
+  --gr:  #30d158;
+  --ye:  #ffd60a;
+  --re:  #ff453a;
+  --or:  #ff9f0a;
+  --pu:  #bf5af2;
+  --font-ui: 'Inter','Noto Sans KR',-apple-system,sans-serif;
+  --font-mono: 'JetBrains Mono',monospace;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; background:var(--bg); font-family:var(--font-ui); color:var(--t1); -webkit-font-smoothing:antialiased; }
+a { color:inherit; text-decoration:none; }
+button { font-family:inherit; border:none; cursor:pointer; }
+
+/* ── Topbar ─────────────────────────────────── */
+#topbar {
+  position:fixed; top:0; left:0; right:0; height:44px; z-index:200;
+  background:rgba(0,0,0,.88); backdrop-filter:blur(20px);
+  border-bottom:.5px solid var(--gb);
+  display:flex; align-items:center; padding:0 16px; gap:12px;
+}
+.tb-back {
+  background:none; color:var(--ac); font-size:15px; font-weight:500;
+  padding:6px 0; display:flex; align-items:center; gap:4px;
+}
+.tb-title { font-size:15px; font-weight:600; flex:1; }
+.tb-sub   { font-size:11px; color:var(--t3); font-family:var(--font-mono); }
+
+/* ── Passcode gate ──────────────────────────── */
+#gate {
+  position:fixed; inset:0; z-index:500;
+  background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; padding:32px;
+}
+#gate.hidden { display:none; }
+.gate-icon  { font-size:48px; }
+.gate-title { font-size:20px; font-weight:700; }
+.gate-sub   { font-size:13px; color:var(--t2); text-align:center; }
+.gate-input {
+  width:100%; max-width:280px; padding:14px 16px;
+  background:var(--l3); border:1.5px solid var(--gb); border-radius:12px;
+  color:var(--t1); font-size:18px; font-family:var(--font-mono);
+  letter-spacing:4px; text-align:center; outline:none;
+}
+.gate-input:focus { border-color:var(--ac); }
+.gate-btn {
+  width:100%; max-width:280px; padding:14px;
+  background:var(--ac); border-radius:12px;
+  color:#fff; font-size:15px; font-weight:600;
+}
+.gate-err { font-size:13px; color:var(--re); }
+
+/* ── Page content ───────────────────────────── */
+#content {
+  padding: 60px 16px 32px;
+  max-width:600px; margin:0 auto;
+}
+
+/* ── Summary card ───────────────────────────── */
+.summary-card {
+  background:var(--l2); border:.5px solid var(--gb);
+  border-radius:16px; padding:20px; margin-bottom:16px;
+}
+.summary-ratio {
+  font-size:52px; font-weight:800; font-family:var(--font-mono);
+  color:var(--gr); line-height:1;
+}
+.summary-ratio-label { font-size:13px; color:var(--t2); margin-top:4px; }
+.summary-pills {
+  display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;
+}
+.s-pill {
+  display:flex; align-items:center; gap:5px;
+  background:var(--g1); border:.5px solid var(--gb);
+  border-radius:20px; padding:5px 10px;
+  font-size:12px; font-weight:500;
+}
+.s-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.checked-at { font-size:11px; color:var(--t3); margin-top:12px; font-family:var(--font-mono); }
+
+/* ── Refresh bar ────────────────────────────── */
+.refresh-bar {
+  display:flex; align-items:center; gap:10px; margin-bottom:16px;
+}
+.refresh-btn {
+  flex:1; padding:12px; background:var(--g1);
+  border:.5px solid var(--gb); border-radius:12px;
+  color:var(--ac); font-size:13px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  transition:opacity .2s;
+}
+.refresh-btn:disabled { opacity:.4; }
+.refresh-hint { font-size:11px; color:var(--t3); line-height:1.4; }
+
+/* ── Category sections ──────────────────────── */
+.cat-section { margin-bottom:16px; }
+.cat-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 4px; margin-bottom:8px;
+}
+.cat-name { font-size:11px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.06em; }
+.cat-count { font-size:11px; color:var(--t3); font-family:var(--font-mono); }
+
+.ind-card {
+  background:var(--l2); border:.5px solid var(--gb); border-radius:12px;
+  overflow:hidden;
+}
+.ind-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px;
+  border-bottom:.5px solid var(--g1);
+}
+.ind-row:last-child { border-bottom:none; }
+
+.ind-name { flex:1; font-size:13px; font-weight:500; }
+.ind-provider { font-size:10px; color:var(--t3); font-family:var(--font-mono); margin-top:1px; }
+
+.badge {
+  font-size:10px; font-weight:700; padding:3px 7px;
+  border-radius:6px; white-space:nowrap; flex-shrink:0;
+}
+.badge-normal     { background:rgba(48,209,88,.15);  color:var(--gr); }
+.badge-fallback   { background:rgba(255,214,10,.12); color:var(--ye); }
+.badge-error      { background:rgba(255,69,58,.12);  color:var(--re); }
+.badge-uncollected{ background:var(--g1);            color:var(--t3); }
+.badge-hardcoded  { background:rgba(10,132,255,.12); color:var(--ac); }
+
+.ind-time { font-size:10px; color:var(--t3); font-family:var(--font-mono); text-align:right; flex-shrink:0; max-width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* ── Loading shimmer ────────────────────────── */
+.skel { animation:skel 1.4s ease-in-out infinite; border-radius:6px; }
+@keyframes skel { 0%,100%{background:var(--g1)} 50%{background:var(--g2)} }
+.skel-row { height:44px; margin-bottom:2px; }
+
+/* ── Toast ──────────────────────────────────── */
+#toast {
+  position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+  background:#1c1c1e; border:.5px solid var(--gb); border-radius:10px;
+  padding:10px 18px; font-size:13px; font-weight:500;
+  white-space:nowrap; z-index:999; opacity:0; transition:opacity .25s;
+}
+#toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<!-- Passcode gate -->
+<div id="gate">
+  <div class="gate-icon">🔒</div>
+  <div class="gate-title">관리자 전용 페이지</div>
+  <div class="gate-sub">데이터 수집 상태 확인을 위해<br>접근 코드를 입력해 주세요.</div>
+  <input id="gate-input" class="gate-input" type="password" placeholder="••••••••" maxlength="20"
+         autocomplete="off" inputmode="text">
+  <button class="gate-btn" id="gate-submit" onclick="checkPasscode()">확인</button>
+  <div class="gate-err" id="gate-err"></div>
+</div>
+
+<!-- Topbar -->
+<div id="topbar">
+  <button class="tb-back" onclick="history.back()">‹ 뒤로</button>
+  <div class="tb-title">데이터 상태</div>
+  <div class="tb-sub" id="tb-count">64 지표</div>
+</div>
+
+<!-- Main content -->
+<div id="content">
+
+  <!-- Summary card -->
+  <div class="summary-card" id="summary-card">
+    <div class="skel skel-row" style="width:100px;height:52px"></div>
+    <div class="skel skel-row" style="width:60%;height:14px;margin-top:8px"></div>
+    <div class="summary-pills" id="summary-pills">
+      <div class="skel" style="width:80px;height:28px;border-radius:20px"></div>
+      <div class="skel" style="width:80px;height:28px;border-radius:20px"></div>
+      <div class="skel" style="width:80px;height:28px;border-radius:20px"></div>
+    </div>
+  </div>
+
+  <!-- Refresh bar -->
+  <div class="refresh-bar">
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshAll()">
+      <span id="refresh-icon">↺</span>
+      <span id="refresh-label">전체 새로고침</span>
+    </button>
+  </div>
+  <div class="refresh-hint" style="margin-top:-8px;margin-bottom:16px;">
+    캐시 초기화 후 시장 데이터를 재수집합니다. 종목 데이터는 종목 탭 방문 시 갱신됩니다.
+  </div>
+
+  <!-- Category sections -->
+  <div id="categories">
+    <!-- Loading skeletons -->
+    <div class="cat-section">
+      <div class="cat-header">
+        <div class="skel" style="width:60px;height:12px;border-radius:4px"></div>
+      </div>
+      <div class="ind-card">
+        <div class="skel skel-row" style="border-radius:0"></div>
+        <div class="skel skel-row" style="border-radius:0"></div>
+        <div class="skel skel-row" style="border-radius:0"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────
+const PASSCODE = 'ctd2024';
+const SESSION_KEY = 'ctd_status_auth';
+
+function getApiBase() {
+  const h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8000';
+  if (/^192\.168\.|^10\./.test(h)) return `http://${h}:8000`;
+  return 'https://connecting-dots-ctd.onrender.com';
+}
+const API = getApiBase();
+
+// ── Passcode ──────────────────────────────────────────────────────
+function checkPasscode() {
+  const val = document.getElementById('gate-input').value.trim();
+  if (val === PASSCODE) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('gate').classList.add('hidden');
+    loadStatus();
+  } else {
+    document.getElementById('gate-err').textContent = '접근 코드가 올바르지 않습니다.';
+    document.getElementById('gate-input').value = '';
+    document.getElementById('gate-input').focus();
+  }
+}
+
+document.getElementById('gate-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPasscode();
+});
+
+// Check session
+if (sessionStorage.getItem(SESSION_KEY) === '1') {
+  document.getElementById('gate').classList.add('hidden');
+  loadStatus();
+}
+
+// ── Status loading ────────────────────────────────────────────────
+async function loadStatus() {
+  try {
+    const res = await fetch(`${API}/api/v1/status`);
+    if (!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    renderStatus(data);
+  } catch (e) {
+    showToast(`오류: ${e.message}`);
+    document.getElementById('summary-card').innerHTML =
+      `<div style="color:var(--re);font-size:13px;">데이터 로드 실패 — ${e.message}</div>`;
+  }
+}
+
+function formatTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 60000);
+  if (diff < 1)  return '방금 전';
+  if (diff < 60) return `${diff}분 전`;
+  const h = Math.floor(diff / 60);
+  if (h < 24)   return `${h}시간 전`;
+  return `${Math.floor(h/24)}일 전`;
+}
+
+function badgeClass(status) {
+  if (status === '정상')    return 'badge-normal';
+  if (status === '폴백')    return 'badge-fallback';
+  if (status === '오류')    return 'badge-error';
+  if (status === '미수집')  return 'badge-uncollected';
+  if (status === 'hardcoded' || status === '하드코딩') return 'badge-hardcoded';
+  return 'badge-uncollected';
+}
+
+function badgeLabel(ind) {
+  if (ind.status_type === 'hardcoded') return '상시';
+  return ind.status;
+}
+
+function renderStatus(data) {
+  const { summary, categories } = data;
+
+  // update topbar count
+  document.getElementById('tb-count').textContent = `${summary.total}개 지표`;
+
+  // summary card
+  const ratioColor = summary.real_ratio >= 70 ? 'var(--gr)'
+                   : summary.real_ratio >= 40 ? 'var(--ye)'
+                   : 'var(--re)';
+  document.getElementById('summary-card').innerHTML = `
+    <div class="summary-ratio" style="color:${ratioColor}">${summary.real_ratio}%</div>
+    <div class="summary-ratio-label">실데이터 비율 (하드코딩 포함)</div>
+    <div class="summary-pills">
+      <div class="s-pill"><div class="s-dot" style="background:var(--gr)"></div>정상 ${summary.real}개</div>
+      <div class="s-pill"><div class="s-dot" style="background:var(--ac)"></div>상시 ${summary.hardcoded}개</div>
+      <div class="s-pill"><div class="s-dot" style="background:var(--ye)"></div>폴백 ${summary.fallback}개</div>
+      <div class="s-pill"><div class="s-dot" style="background:var(--t3)"></div>미수집 ${summary.uncollected}개</div>
+    </div>
+    <div class="checked-at">확인 시각: ${new Date(summary.checked_at).toLocaleString('ko-KR', {timeZone:'Asia/Seoul', hour12:false})}</div>
+  `;
+
+  // categories
+  const container = document.getElementById('categories');
+  container.innerHTML = '';
+
+  for (const cat of categories) {
+    const realCount = cat.indicators.filter(i => i.status === '정상' || i.status_type === 'hardcoded').length;
+    const sec = document.createElement('div');
+    sec.className = 'cat-section';
+    sec.innerHTML = `
+      <div class="cat-header">
+        <div class="cat-name">${cat.name}</div>
+        <div class="cat-count">${realCount}/${cat.indicators.length}</div>
+      </div>
+      <div class="ind-card">
+        ${cat.indicators.map(ind => `
+          <div class="ind-row">
+            <div style="flex:1;min-width:0">
+              <div class="ind-name">${ind.name}</div>
+              <div class="ind-provider">${ind.provider}</div>
+            </div>
+            <span class="badge ${badgeClass(ind.status_type === 'hardcoded' ? 'hardcoded' : ind.status)}">${badgeLabel(ind)}</span>
+            <div class="ind-time">${formatTime(ind.last_updated)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(sec);
+  }
+}
+
+// ── Refresh ───────────────────────────────────────────────────────
+async function refreshAll() {
+  const btn  = document.getElementById('refresh-btn');
+  const icon = document.getElementById('refresh-icon');
+  const lbl  = document.getElementById('refresh-label');
+
+  btn.disabled = true;
+  icon.textContent = '⟳';
+  icon.style.animation = 'spin 1s linear infinite';
+  lbl.textContent = '캐시 초기화 중…';
+
+  // inject keyframe once
+  if (!document.getElementById('spin-kf')) {
+    const s = document.createElement('style');
+    s.id = 'spin-kf';
+    s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  }
+
+  try {
+    // 1. clear cache
+    await fetch(`${API}/api/v1/cache`, { method: 'DELETE' });
+
+    lbl.textContent = '시장 데이터 재수집 중…';
+
+    // 2. trigger market re-collection
+    await fetch(`${API}/api/v1/market`);
+
+    lbl.textContent = '상태 갱신 중…';
+
+    // 3. reload status
+    const res = await fetch(`${API}/api/v1/status`);
+    if (!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    renderStatus(data);
+    showToast('새로고침 완료');
+  } catch (e) {
+    showToast(`새로고침 실패: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    icon.style.animation = '';
+    icon.textContent = '↺';
+    lbl.textContent = '전체 새로고침';
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>

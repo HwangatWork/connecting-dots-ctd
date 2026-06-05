@@ -6,6 +6,7 @@ https://api.alternative.me/fng/
 import httpx
 import logging
 from datetime import datetime
+import data_registry as dr
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ async def get_fear_greed() -> dict:
         previous = int(data[1]["value"]) if len(data) > 1 else current
         label = data[0]["value_classification"]
 
+        dr.record("fg_index", "Alternative.me", False, current)
         return {
             "value": current,
             "label": label,
@@ -35,4 +37,5 @@ async def get_fear_greed() -> dict:
         }
     except Exception as e:
         log.warning(f"[FG] fear_greed fetch failed: {e}")
+        dr.record("fg_index", "Alternative.me", True)
         return {"value": 50, "label": "Neutral", "previous": 50, "change": 0}

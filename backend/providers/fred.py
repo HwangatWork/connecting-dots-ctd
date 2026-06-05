@@ -9,6 +9,7 @@ API 키 불필요한 공개 시리즈 전용.
 import httpx
 import logging
 from datetime import datetime, timedelta
+import data_registry as dr
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ async def get_fed_total_assets() -> dict:
     """
     rows = await get_series("WALCL", periods=3)
     if not rows or len(rows) < 2:
+        dr.record("fred_walcl", "FRED", True)
         return {"value": 7.0, "change_pct": 0.0, "date": "—", "source": "fallback"}
 
     latest  = rows[-1]
@@ -56,6 +58,7 @@ async def get_fed_total_assets() -> dict:
     prev_v  = prev["value"] / 1e6
     chg_pct = (value - prev_v) / prev_v * 100 if prev_v else 0
 
+    dr.record("fred_walcl", "FRED", False, f"${round(value,2)}T")
     return {
         "value":      round(value, 2),
         "change_pct": round(chg_pct, 2),
@@ -71,8 +74,10 @@ async def get_rate_spread_10y2y() -> dict:
     """
     rows = await get_series("T10Y2Y", periods=3)
     if not rows:
+        dr.record("fred_t10y2y", "FRED", True)
         return {"value": 0.0, "date": "—", "source": "fallback"}
     latest = rows[-1]
+    dr.record("fred_t10y2y", "FRED", False, f"{latest['value']:.2f}%")
     return {
         "value":  latest["value"],
         "date":   latest["date"],
