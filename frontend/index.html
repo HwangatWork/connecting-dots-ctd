@@ -880,25 +880,25 @@ a { color:inherit; text-decoration:none; }
 
     <!-- Supply -->
     <div class="section-card">
-      <div class="sec-label">Zone 1B — 수급 구조 <span class="badge t-warn">1개월</span></div>
+      <div class="sec-label">Zone 1B — 수급 구조 <span class="badge t-hold">1개월</span></div>
       <div class="supply-row">
         <div class="supply-actor">외국인</div>
-        <div class="supply-track"><div class="supply-fill" style="width:74%;background:var(--re)"></div></div>
-        <div class="supply-amt" style="color:var(--re)">-23,400억</div>
+        <div class="supply-track"><div class="supply-fill" style="width:0%;background:var(--t3)"></div></div>
+        <div class="supply-amt" style="color:var(--t3)">점검 중</div>
       </div>
       <div class="supply-row">
         <div class="supply-actor">기관</div>
-        <div class="supply-track"><div class="supply-fill" style="width:28%;background:var(--re)"></div></div>
-        <div class="supply-amt" style="color:var(--re)">-8,700억</div>
+        <div class="supply-track"><div class="supply-fill" style="width:0%;background:var(--t3)"></div></div>
+        <div class="supply-amt" style="color:var(--t3)">점검 중</div>
       </div>
       <div class="supply-row">
         <div class="supply-actor">개인</div>
-        <div class="supply-track"><div class="supply-fill" style="width:100%;background:var(--gr)"></div></div>
-        <div class="supply-amt" style="color:var(--gr)">+31,200억</div>
+        <div class="supply-track"><div class="supply-fill" style="width:0%;background:var(--t3)"></div></div>
+        <div class="supply-amt" style="color:var(--t3)">점검 중</div>
       </div>
-      <div class="supply-verdict" style="background:var(--yed);border:.5px solid var(--yeb)">
-        <span>⚠</span>
-        <div style="color:var(--t2)"><strong style="color:var(--ye)">기관·외국인 동반 매도 → 개인 흡수</strong> — 역사적 위험 신호. 분할 접근 권장.</div>
+      <div class="supply-verdict" style="background:var(--g2);border:.5px solid var(--g3)">
+        <span>⏳</span>
+        <div style="color:var(--t2)"><strong style="color:var(--t2)">수급 데이터 점검 중</strong> — pykrx 복구 후 자동 갱신</div>
       </div>
     </div>
 
@@ -1314,22 +1314,22 @@ a { color:inherit; text-decoration:none; }
       </div>
       <div class="supply-row">
         <div class="supply-actor">외국인</div>
-        <div class="supply-track"><div class="supply-fill" id="st-f-fill" style="width:74%;background:var(--re)"></div></div>
-        <div class="supply-amt" style="color:var(--re)" id="st-f-amt">-23,400억</div>
+        <div class="supply-track"><div class="supply-fill" id="st-f-fill" style="width:0%;background:var(--t3)"></div></div>
+        <div class="supply-amt" style="color:var(--t3)" id="st-f-amt">점검 중</div>
       </div>
       <div class="supply-row">
         <div class="supply-actor">기관</div>
-        <div class="supply-track"><div class="supply-fill" id="st-i-fill" style="width:28%;background:var(--re)"></div></div>
-        <div class="supply-amt" style="color:var(--re)" id="st-i-amt">-8,700억</div>
+        <div class="supply-track"><div class="supply-fill" id="st-i-fill" style="width:0%;background:var(--t3)"></div></div>
+        <div class="supply-amt" style="color:var(--t3)" id="st-i-amt">점검 중</div>
       </div>
       <div class="supply-row">
         <div class="supply-actor">개인</div>
-        <div class="supply-track"><div class="supply-fill" id="st-ind-fill" style="width:100%;background:var(--gr)"></div></div>
-        <div class="supply-amt" style="color:var(--gr)" id="st-ind-amt">+31,200억</div>
+        <div class="supply-track"><div class="supply-fill" id="st-ind-fill" style="width:0%;background:var(--t3)"></div></div>
+        <div class="supply-amt" style="color:var(--t3)" id="st-ind-amt">점검 중</div>
       </div>
-      <div class="supply-verdict" style="background:var(--yed);border:.5px solid var(--yeb)" id="st-supply-verdict">
-        <span>⚠</span>
-        <div style="color:var(--t2)"><strong style="color:var(--ye)">기관·외국인 동반 매도 → 개인 흡수</strong> — 역사적 위험 신호.</div>
+      <div class="supply-verdict" style="background:var(--g2);border:.5px solid var(--g3)" id="st-supply-verdict">
+        <span>⏳</span>
+        <div style="color:var(--t2)"><strong style="color:var(--t2)">수급 데이터 점검 중</strong></div>
       </div>
     </div>
 
@@ -2043,6 +2043,12 @@ function updateGauge(temp) {
   }
 }
 
+function _supplyColor(direction) {
+  if (direction > 0) return 'var(--gr)';
+  if (direction < 0) return 'var(--re)';
+  return 'var(--t3)';
+}
+
 function updateSupply(supply) {
   const rows = document.querySelectorAll('.supply-row');
   const actors = [supply.foreign, supply.institution, supply.individual];
@@ -2050,7 +2056,7 @@ function updateSupply(supply) {
     if (!actors[i]) return;
     const fill = row.querySelector('.supply-fill');
     const amt  = row.querySelector('.supply-amt');
-    const color = actors[i].direction >= 0 ? 'var(--gr)' : 'var(--re)';
+    const color = _supplyColor(actors[i].direction);
     if (fill) { fill.style.width = actors[i].pct + '%'; fill.style.background = color; }
     if (amt)  { amt.textContent = actors[i].amount; amt.style.color = color; }
   });
@@ -2509,7 +2515,7 @@ function _applySupplyToStatus(supply) {
   ];
   for (const { fillId, amtId, data: a } of actors) {
     if (!a) continue;
-    const color = a.direction >= 0 ? 'var(--gr)' : 'var(--re)';
+    const color = _supplyColor(a.direction);
     const fill = document.getElementById(fillId);
     const amt  = document.getElementById(amtId);
     if (fill) { fill.style.width = a.pct + '%'; fill.style.background = color; }
