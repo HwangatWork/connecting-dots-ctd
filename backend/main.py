@@ -1,5 +1,6 @@
 """
 Connecting the Dots (CTD) — FastAPI backend entry point.
+CI/CD: GitHub Actions auto-deploy enabled (2026-06-06)
 """
 import logging
 from datetime import datetime, timezone
