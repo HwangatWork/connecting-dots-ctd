@@ -77,7 +77,8 @@ hook: .claude/hooks/roadmap_runner.sh (Stop hook, exit 2)
 - [x] UX/UI 전면 개선 (시장탭 Hero 높이/레이아웃, 현황탭 카드 정비)
 
 ### 긴급
-- [ ] T1. Netlify 배포 필터 추가 — .github/workflows/*.yml에 paths: ['frontend/**'] 적용 (다음 백엔드 푸시 시 Netlify 미트리거 확인)
+- [x] T1. Netlify 배포 필터 확인 — frontend/** paths 필터 이미 적용됨
+- [x] T1-b. CLAUDE.md CLI 배포 금지 규칙 추가 — git push → GitHub Actions 경로만 허용
 - [ ] T2. FRED API 키 로테이션 — 신규 발급 → .env + Render 환경변수 갱신 → 구 키 폐기 → /api/market 응답 확인
 
 ### UX 개선 (T1~T2 후)

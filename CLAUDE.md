@@ -72,9 +72,13 @@ AI Investment/
   `RENDER_API_KEY` secret이 GitHub에 등록되어 있어야 `backend/**` push 시 자동 배포.
 
 ### Netlify 프론트엔드
-- **배포 방식**: GitHub 자동 배포 ❌ → **CLI 수동 배포** 필요
-- **배포 명령어**: `npx netlify-cli deploy --prod --dir=frontend`
+- **배포 방식**: `frontend/**` 변경 시 GitHub Actions 자동 배포 (`render-deploy.yml` paths 필터)
+- **CLI 직접 배포 금지**: `npx netlify-cli deploy` 직접 실행 금지 — GitHub Actions 경로만 허용
+- **배포 확인**: curl 또는 GitHub Actions 로그로만 검증 (Netlify 대시보드 직접 접근 불필요)
 - **Pretty URL**: Netlify가 `href="/status.html"` → `href="/status"` 자동 변환됨.
+
+> ⚠️ **배포 원칙**: Netlify/Render 모두 `git push → GitHub Actions` 경로로만 배포.
+> CLI 직접 실행(`npx netlify-cli deploy`, `curl Render API`)은 긴급 복구 시에만 예외 허용.
 
 ---
 
