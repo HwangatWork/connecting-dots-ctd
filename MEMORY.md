@@ -85,8 +85,9 @@
 
 ```
 Render 서비스 ID : srv-d8gv8l0jo6nc73e299e0
-Render API key  : rnd_7SDfOESqdssdB4MUr900sp5NCOka
+Render API key  : <GitHub Secrets: RENDER_API_KEY>  ← Render 대시보드에서 발급
 Netlify site ID : 0f762967-47e8-4fab-9528-0a4fa0fbeb98
+Netlify token   : <GitHub Secrets: NETLIFY_AUTH_TOKEN>  ← Netlify User Settings에서 발급
 GitHub repo     : HwangatWork/connecting-dots-ctd
 branch          : master
 ```
