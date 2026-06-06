@@ -4,6 +4,7 @@ from typing import Final
 class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["*"]
+    fred_api_key: str = ""
 
     class Config:
         env_file = ".env"
