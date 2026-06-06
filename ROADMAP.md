@@ -70,18 +70,30 @@ hook: .claude/hooks/roadmap_runner.sh (Stop hook, exit 2)
 
 ---
 
-## P2 — 기능 확장 (이후)
+## P2 — 현재 진행
 
+### 완료
 - [x] 다음 작업 우선순위 결정 — UX/UI 전면 개선 선택
 - [x] UX/UI 전면 개선 (시장탭 Hero 높이/레이아웃, 현황탭 카드 정비)
-- [ ] 로그인 (이름+이메일+패스코드, JWT, DB 없이 JSON 저장)
+
+### 긴급
+- [ ] T1. Netlify 배포 필터 추가 — .github/workflows/*.yml에 paths: ['frontend/**'] 적용 (다음 백엔드 푸시 시 Netlify 미트리거 확인)
+- [ ] T2. FRED API 키 로테이션 — 신규 발급 → .env + Render 환경변수 갱신 → 구 키 폐기 → /api/market 응답 확인
+
+### UX 개선 (T1~T2 후)
+- [?] T3. UX 개선 서브태스크 정의 — 화면 보면서 측정 가능한 단위로 도출 (Hero 정보밀도, ind-card 그리드, 점검 중 표기, 색상 일관성)
+
+### 의사결정 (코딩 전 합의)
+- [?] T4. 로그인/저장소 아키텍처 결정 — A안: localStorage MVP / B안: 로그인+SQLite (DB없이 JSON은 동시쓰기 문제로 제외)
+
+### 이후
 - [ ] 내 종목 등록 (종목명 검색→코드 자동매핑→저장)
 - [ ] 포트폴리오 대시보드 (평가금액/수익률/세후수익률 자동계산)
 - [ ] 종목 즐겨찾기 (localStorage)
 - [ ] 푸시 알림 (시장 온도 임계값)
 - [ ] 종목 탭 검색 기능
 
-## P3 — 인프라 (이후)
+## P3 — 보류
 
 - [ ] Render 유료 플랜 전환 (슬립 제거)
-- [ ] 수급 데이터 복구 (pykrx 대체 또는 KRX 직접 API)
+- [ ] 수급 데이터 복구 (KRX 직접 API)
