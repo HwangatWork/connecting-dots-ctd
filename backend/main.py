@@ -58,6 +58,55 @@ async def clear_cache():
     return {"cleared": True}
 
 
+@app.get("/api/v1/debug/price", tags=["debug"])
+async def debug_price():
+    """DIAGNOSTIC ONLY — compare fast_info vs download vs info for ^GSPC. Remove after diagnosis."""
+    import yfinance as yf
+    results: dict = {}
+
+    # Method 1: fast_info (current production path)
+    try:
+        t = yf.Ticker("^GSPC")
+        fi = t.fast_info
+        results["fast_info"] = {
+            "last_price":      getattr(fi, "last_price", None),
+            "previous_close":  getattr(fi, "previous_close", None),
+            "last_volume":     getattr(fi, "last_volume", None),
+        }
+    except Exception as e:
+        results["fast_info"] = {"error": str(e)}
+
+    # Method 2: yf.download — 5-day window to ensure we get at least one trading day
+    try:
+        import pandas as pd
+        df = yf.download("^GSPC", period="5d", interval="1d", progress=False, auto_adjust=True)
+        if not df.empty:
+            close_series = df["Close"].squeeze()
+            results["download_5d"] = {
+                "latest_close": float(close_series.iloc[-1]),
+                "latest_date":  str(df.index[-1].date()),
+                "rows":         len(df),
+            }
+        else:
+            results["download_5d"] = {"error": "empty dataframe"}
+    except Exception as e:
+        results["download_5d"] = {"error": str(e)}
+
+    # Method 3: t.info (heavy endpoint — checks regularMarketPrice)
+    try:
+        t2 = yf.Ticker("^GSPC")
+        info = t2.info
+        results["info_api"] = {
+            "regularMarketPrice": info.get("regularMarketPrice"),
+            "previousClose":      info.get("previousClose"),
+            "currentPrice":       info.get("currentPrice"),
+        }
+    except Exception as e:
+        results["info_api"] = {"error": str(e)}
+
+    return results
+
+
 # Serve frontend static files — registered after API routes so /api/* takes priority
 @app.get("/", include_in_schema=False)
 async def serve_index():
