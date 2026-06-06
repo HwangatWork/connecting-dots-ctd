@@ -46,11 +46,7 @@ AI Investment/
 ├── old/                    # 레거시 (읽기 전용)
 ├── CLAUDE.md               # 이 파일
 ├── ROADMAP.md              # 기능 로드맵
-├── render.yaml             # Render 배포 설정
-├── netlify.toml            # Netlify 배포 설정
-├── requirements.txt        # Render 빌드용 (backend/requirements.txt 사본)
-├── runtime.txt             # Render Python 버전
-└── Procfile                # Render 프로세스 정의
+└── netlify.toml            # Netlify 배포 설정 (Render 설정은 대시보드 직접 관리)
 ```
 
 ---
