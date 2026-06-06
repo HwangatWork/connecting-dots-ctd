@@ -1,15 +1,15 @@
 # MEMORY.md — CTD 프로젝트 진행 상태
 
 > 세션 간 컨텍스트 브릿지. 새 세션 시작 시 CLAUDE.md → AGENTS.md → 이 파일 순서로 읽는다.
-> 최종 업데이트: 2026-06-06
+> 최종 업데이트: 2026-06-06 (P0 완료, Range Check 구현)
 
 ---
 
 ## 현재 진행 상태
 
 **버전**: v1.1
-**백엔드 live 커밋**: `5d15dbb` (2026-06-06 — GitHub Actions 자동 배포 완성)
-**프론트 live 버전**: CTD v1.1 — auto-deploy enabled (Netlify Actions 자동 배포, 2026-06-06)
+**백엔드 live 커밋**: `ecf27e0` (2026-06-06 — Range Check + CNN F&G + 5지표)
+**프론트 live 버전**: CTD v1.1 — auto-deploy enabled (Netlify, 2026-06-06)
 
 ---
 
@@ -19,13 +19,12 @@
 |------|------|------|
 | Agentic Engineering 환경 구축 (CLAUDE.md, ROADMAP, commands/) | `cfdaa07` | ✅ |
 | 루트 폴더 정리 (doc/, old/ 이동) | `e4dab46` | ✅ |
-| Render rootDir=backend 확인, 불필요 파일 이동 | `c77574d` | ✅ |
-| CLAUDE.md 오늘 작업 내용 반영 | `0a7814c` | ✅ |
 | Render auto-deploy 복구 (GitHub Actions) | `d793535` | ✅ |
-| AGENTS.md 작성 (DO NOT 패턴 5개) | 미push | ✅ |
-| CLAUDE.md 강화 (DEV 사이클, Evidence-First, TCR) | 미push | ✅ |
-| MEMORY.md 작성 | 미push | ✅ |
-| backend/tests/ 테스트 하네스 | 미push | 🔄 진행 중 |
+| 보안 처리 (API 키 rotate, .env.example, .gitignore) | `d2dcf18` | ✅ |
+| Netlify GitHub Actions 자동 배포 구축 | `d2dcf18` | ✅ |
+| AGENTS.md DO NOT 6 추가 + F&G CNN 소스 교체 | `329caa8` | ✅ |
+| 현황 탭 5개 지표 추가 + ticker/market API 확장 | `18ec9c6` | ✅ |
+| Range Check + Staleness Check + status.html 경고 컬럼 | `ecf27e0` | ✅ |
 
 ---
 
@@ -33,25 +32,43 @@
 
 ### 배포 아키텍처
 - **Render rootDir = `backend`**: `backend/requirements.txt`가 실제 빌드에 사용됨.
-  루트 `requirements.txt`, `Procfile`, `runtime.txt`는 `old/`로 이동.
-- **Netlify = CLI 수동 배포**: `npx netlify-cli deploy --prod --dir=frontend`.
-  GitHub 자동 배포 미연결 상태.
-- **render.yaml** 실제 서비스와 불일치 → `doc/render.yaml.reference`로 이동.
-  Render 설정은 대시보드가 정본.
+- **Netlify = GitHub Actions 자동 배포**: `frontend/**` push 시 자동 배포.
+  커밋 후 2-3분 내 https://connecting-dots-ctd.netlify.app 에 반영.
+- **Render = GitHub Actions 자동 배포**: `backend/**` push 시 자동 배포.
+  빌드 시간 3-5분 + 콜드 스타트 최대 2분.
+
+### 데이터 방법론 수정 (P0 완료)
+- **F&G 소스**: Alternative.me (크립토 기반) → CNN `production.dataviz.cnn.io` (주식시장 기반)
+  - 로컬 직접 호출 테스트: score=42.06, rating="fear"
+  - Render live 확인: fg_index.value_hint="42", provider="CNN", status="정상"
+- **현황 탭 추가 지표**: DOW (ic-dow), DXY (ic-dxy), 장단기금리차 (ic-spread),
+  SKEW (ic-skew), 수급금액 (ic-fflow)
+
+### Range Check 구현
+- VIX: 10-80 / CNN F&G: 0-100 / KOSPI: 1500-3500 / 10Y금리: 0.3-7.0%
+- DXY: 80-130 / SKEW: 100-180 / T10Y2Y: -3~5%
+- /api/v1/status 응답에 `range_check`, `is_stale` 필드 추가
+- summary에 `validation_warnings`, `stale_count` 추가
+- status.html에 ✅/⚠️/🔴 검증 컬럼 추가
 
 ### Agentic Engineering 원칙
 - Plan-First → Evidence-First → DEV 사이클(D→E→V→C) 정립
 - 완료 기준: 실제 URL fetch 결과로만 판단
-- AGENTS.md에 실제 사고 5건 기록
+- AGENTS.md DO NOT 6개 (commit 후 push까지 완료해야 작업 완료)
 
 ---
 
 ## 미해결 이슈
 
 ### 🟡 MEDIUM — Yahoo Finance 장 외 시간 fallback
-- `fast_info.last_price` / `previous_close` 장 외 시간 None 반환
-- `/api/v1/status` real_ratio 장 외 ~20%, 장중 기대치 60%+
-- 해결 방안: `ticker.info` fallback 또는 장중 여부 체크 로직 추가
+- `fast_info.last_price` 장 외 시간 None 반환
+- `/api/v1/status` real_ratio 장 외 ~22%, 장중 기대치 60%+
+- 해결 방안: `ticker.info` fallback 또는 장중 여부 체크 로직
+
+### 🟡 MEDIUM — ticker 레이블 불일치
+- JS `_applyTickerToStatus` 에서 `'S&P'` → ticker는 `'S&P 500'` (불일치)
+- `'나스닥'` → ticker는 `'NASDAQ'` (불일치)
+- DOW, DXY, SKEW는 정상 매핑
 
 ### 🟢 LOW — Render free tier 콜드 스타트
 - 15분 비활성 시 슬립, wake-up 최대 2분 소요
@@ -61,10 +78,11 @@
 
 ## 다음 세션 우선순위
 
-1. **Yahoo Finance 장중 실데이터** — real_ratio 60%+ 달성
-2. **현황 탭 마지막 갱신 시각** — 지표 카드에 timestamp 표시
-3. **에러 상태 UI** — API 실패 시 사용자 메시지
-4. **종목 탭 검색 기능**
+1. **ticker 레이블 불일치 수정** — S&P 500, NASDAQ 현황 탭 업데이트 안 됨
+2. **Yahoo Finance 장중 실데이터** — real_ratio 60%+ 달성
+3. **지표 카드 갱신 시각 표시** — 현황 탭 각 카드 하단에 `출처 | 갱신: HH:MM`
+4. **/status 비교 테이블** — raw 값 vs CTD 계산값 오차 컬럼
+5. **에러 상태 UI** — API 실패 시 사용자 메시지
 
 ---
 
