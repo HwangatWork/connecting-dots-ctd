@@ -7,9 +7,9 @@
 
 ## 현재 진행 상태
 
-**버전**: v1.1 (프론트 배포 완료)
-**백엔드 live 커밋**: `d793535` (2026-06-06 — GitHub Actions 워크플로 추가)
-**프론트 live 버전**: CTD v1.1 (Netlify CLI 수동 배포, 2026-06-06)
+**버전**: v1.1
+**백엔드 live 커밋**: `5d15dbb` (2026-06-06 — GitHub Actions 자동 배포 완성)
+**프론트 live 버전**: CTD v1.1 — auto-deploy enabled (Netlify Actions 자동 배포, 2026-06-06)
 
 ---
 
@@ -48,19 +48,6 @@
 
 ## 미해결 이슈
 
-### 🔴 HIGH — Render auto-deploy GitHub 웹훅 미작동
-- **현상**: 2026-06-05 00:41 (`53101af`) 이후 push가 Render에 자동 반영되지 않음
-- **임시 복구**: GitHub Actions (`.github/workflows/render-deploy.yml`) 추가
-  - `backend/**` 변경 시 Render API 직접 호출
-  - **필요 조건**: `RENDER_API_KEY` 를 GitHub Secrets에 등록해야 작동
-  - GitHub → Settings → Secrets and variables → Actions → `RENDER_API_KEY` = `rnd_7SDfOESqdssdB4MUr900sp5NCOka`
-- **근본 원인**: 미확인 (Render 대시보드에서 GitHub 웹훅 재연결 필요)
-
-### 🟡 MEDIUM — Netlify 배포 자동화 미구현
-- 현재 `npx netlify-cli deploy --prod --dir=frontend` 수동 실행 필요
-- frontend/ 변경 시 자동 배포 트리거 없음
-- 해결 방안: GitHub Actions에 Netlify 배포 스텝 추가 (`netlify-actions/deploy`)
-
 ### 🟡 MEDIUM — Yahoo Finance 장 외 시간 fallback
 - `fast_info.last_price` / `previous_close` 장 외 시간 None 반환
 - `/api/v1/status` real_ratio 장 외 ~20%, 장중 기대치 60%+
@@ -74,10 +61,10 @@
 
 ## 다음 세션 우선순위
 
-1. **GitHub Secrets 등록 확인** — `RENDER_API_KEY` 등록 여부 확인 후 backend/ push 테스트
-2. **Netlify 자동 배포** — GitHub Actions에 Netlify 배포 스텝 추가
-3. **Yahoo Finance 장중 실데이터** — real_ratio 60%+ 달성
-4. **현황 탭 마지막 갱신 시각** — 지표 카드에 timestamp 표시
+1. **Yahoo Finance 장중 실데이터** — real_ratio 60%+ 달성
+2. **현황 탭 마지막 갱신 시각** — 지표 카드에 timestamp 표시
+3. **에러 상태 UI** — API 실패 시 사용자 메시지
+4. **종목 탭 검색 기능**
 
 ---
 
