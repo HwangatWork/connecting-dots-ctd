@@ -90,6 +90,7 @@
 
 ### P3 — 인프라
 
+- [ ] **Render MCP 인증 재설정** — `claude mcp add render` 시 API 키 포함 재등록, `mcp__render__list_deploys` 인증 통과 확인
 - [ ] Render 유료 플랜 전환 (슬립 제거, 응답 속도 개선)
 - [ ] 백엔드 테스트 추가 (pytest, import 검증 자동화)
 
