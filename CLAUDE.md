@@ -67,7 +67,8 @@ AI Investment/
 - **buildCommand**: `pip install -r requirements.txt` → `backend/requirements.txt` 사용
 - **startCommand**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 - **region**: ohio / **plan**: free (15분 비활성 시 슬립)
-- ⚠️ **auto-deploy**: GitHub Actions (`.github/workflows/render-deploy.yml`) 으로 복구.
+- ⚠️ **Render Auto-Deploy: OFF 유지 필수** — Render 대시보드에서 Auto-Deploy를 OFF로 설정해야 이중 배포 방지.
+- **배포 트리거**: GitHub Actions **전용** (`.github/workflows/render-deploy.yml`).
   `RENDER_API_KEY` secret이 GitHub에 등록되어 있어야 `backend/**` push 시 자동 배포.
 
 ### Netlify 프론트엔드
