@@ -112,18 +112,20 @@ async def build_market_response() -> MarketResponse:
         sign = "+" if c >= 0 else ""
         return f"{sign}{c:.2f}%"
 
-    vix_color = "var(--gr)" if vix_val < 20 else ("var(--ye)" if vix_val < 25 else "var(--re)")
-    fg_color  = "var(--gr)" if fg_data["value"] < 40 else ("var(--ye)" if fg_data["value"] < 65 else "var(--re)")
-    fx_color  = "var(--re)" if fx_val and fx_val > 1350 else "var(--ye)"
-    tnx_color = "var(--re)" if tnx_val and tnx_val > 4.5 else "var(--ye)"
+    vix_color    = "var(--gr)" if vix_val < 20 else ("var(--ye)" if vix_val < 25 else "var(--re)")
+    fg_color     = "var(--gr)" if fg_data["value"] < 40 else ("var(--ye)" if fg_data["value"] < 65 else "var(--re)")
+    fx_color     = "var(--re)" if fx_val and fx_val > 1350 else "var(--ye)"
+    tnx_color    = "var(--re)" if tnx_val and tnx_val > 4.5 else "var(--ye)"
+    spread_color = "var(--gr)" if rate_spread > 0 else ("var(--ye)" if rate_spread > -0.5 else "var(--re)")
 
     quick_metrics = [
-        QuickMetric(label="VIX",   value=f"{vix_val:.1f}",                       color=vix_color,  sub="공포지수"),
-        QuickMetric(label="F&G",   value=str(fg_data["value"]),                   color=fg_color,   sub=fg_data["label"]),
-        QuickMetric(label="환율",  value=_fmt_price(fx_val),                      color=fx_color,   sub="USD/KRW"),
-        QuickMetric(label="금리",  value=f"{tnx_val:.2f}%" if tnx_val else "—",  color=tnx_color,  sub="미국 10Y"),
+        QuickMetric(label="VIX",   value=f"{vix_val:.1f}",                       color=vix_color,    sub="공포지수"),
+        QuickMetric(label="F&G",   value=str(fg_data["value"]),                   color=fg_color,     sub=fg_data["label"]),
+        QuickMetric(label="환율",  value=_fmt_price(fx_val),                      color=fx_color,     sub="USD/KRW"),
+        QuickMetric(label="금리",  value=f"{tnx_val:.2f}%" if tnx_val else "—",  color=tnx_color,    sub="미국 10Y"),
         QuickMetric(label="코스피",value=_fmt_price(kospi_val),                   color=_chg_color(kospi_chg >= 0),  sub=_fmt_chg(kospi_chg)),
         QuickMetric(label="코스닥",value=_fmt_price(kosdaq_val),                  color=_chg_color(kosdaq_chg >= 0), sub=_fmt_chg(kosdaq_chg)),
+        QuickMetric(label="금리차",value=f"{rate_spread:+.2f}%",                  color=spread_color, sub="10Y-2Y"),
     ]
 
     # 5. 수급 데이터

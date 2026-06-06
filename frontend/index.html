@@ -1184,6 +1184,12 @@ a { color:inherit; text-decoration:none; }
           <div class="ic-chg dn" id="ic-wti-chg">-0.8%</div>
           <span class="badge t-hold ic-sig">중립</span>
         </div>
+        <div class="ind-card">
+          <div class="ic-label">DOW</div>
+          <div class="ic-val nt" id="ic-dow-val">—</div>
+          <div class="ic-chg nt" id="ic-dow-chg">—</div>
+          <span class="badge t-hold ic-sig">—</span>
+        </div>
       </div>
     </div>
 
@@ -1246,6 +1252,24 @@ a { color:inherit; text-decoration:none; }
           <div class="ic-chg nt">낙관편향</div>
           <span class="badge t-warn ic-sig">주의</span>
         </div>
+        <div class="ind-card">
+          <div class="ic-label">DXY 달러</div>
+          <div class="ic-val nt" id="ic-dxy-val">—</div>
+          <div class="ic-chg nt" id="ic-dxy-chg">—</div>
+          <span class="badge t-hold ic-sig">—</span>
+        </div>
+        <div class="ind-card">
+          <div class="ic-label">SKEW</div>
+          <div class="ic-val nt" id="ic-skew-val">—</div>
+          <div class="ic-chg nt" id="ic-skew-chg">—</div>
+          <span class="badge t-hold ic-sig">—</span>
+        </div>
+        <div class="ind-card">
+          <div class="ic-label">장단기 금리차</div>
+          <div class="ic-val nt" id="ic-spread-val">—</div>
+          <div class="ic-chg nt">10Y-2Y</div>
+          <span class="badge t-hold ic-sig">—</span>
+        </div>
       </div>
     </div>
 
@@ -1283,6 +1307,11 @@ a { color:inherit; text-decoration:none; }
     <!-- 수급 -->
     <div class="section-card">
       <div class="sec-label">💹 수급 (1개월)</div>
+      <div id="ic-fflow" style="display:flex;gap:8px;margin-bottom:10px;font-size:11px">
+        <span style="color:var(--t2)">외국인</span>
+        <span id="ic-fflow-val" style="color:var(--t1);font-family:var(--mono)">—</span>
+        <span style="color:var(--t2)">억원</span>
+      </div>
       <div class="supply-row">
         <div class="supply-actor">외국인</div>
         <div class="supply-track"><div class="supply-fill" id="st-f-fill" style="width:74%;background:var(--re)"></div></div>
@@ -2421,6 +2450,12 @@ async function fetchStatusData() {
     const el = document.getElementById('ic-us10y-val');
     if (el) el.textContent = rate.value;
   }
+  // 장단기 금리차
+  const spread = (data.quick_metrics || []).find(m => m.label === '금리차');
+  if (spread) {
+    const el = document.getElementById('ic-spread-val');
+    if (el) { el.textContent = spread.value; el.style.color = spread.color; }
+  }
   // 수급 업데이트
   if (data.supply) _applySupplyToStatus(data.supply);
 }
@@ -2438,6 +2473,9 @@ function _applyTickerToStatus(items) {
     ['코스피',  'ic-kospi-val',  'ic-kospi-chg'],
     ['코스닥',  'ic-kosdaq-val', 'ic-kosdaq-chg'],
     ['USD/KRW', 'ic-usdkrw-val', 'ic-usdkrw-chg'],
+    ['DOW',     'ic-dow-val',    'ic-dow-chg'],
+    ['DXY',     'ic-dxy-val',    'ic-dxy-chg'],
+    ['SKEW',    'ic-skew-val',   'ic-skew-chg'],
   ];
   for (const [label, valId, chgId] of pairs) {
     const it = map[label];
@@ -2468,6 +2506,11 @@ function _applySupplyToStatus(supply) {
   if (verdict && supply.judgment) {
     const div = verdict.querySelector('div');
     if (div) div.innerHTML = `<strong style="color:${supply.judgment_cls}">${supply.judgment}</strong>`;
+  }
+  const fflow = document.getElementById('ic-fflow-val');
+  if (fflow && supply.foreign?.amount) {
+    fflow.textContent = supply.foreign.amount;
+    fflow.style.color = supply.foreign.direction >= 0 ? 'var(--gr)' : 'var(--re)';
   }
 }
 

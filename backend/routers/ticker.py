@@ -27,6 +27,8 @@ async def get_ticker():
         "VIX":     INDEX_SYMBOLS["vix"],
         "WTI":     INDEX_SYMBOLS["wti"],
         "금":      "GC=F",
+        "SKEW":    INDEX_SYMBOLS["skew"],
+        "DXY":     INDEX_SYMBOLS["dxy"],
     }
     prices = yf_p.get_current_prices(list(yf_symbols.values()))
 
