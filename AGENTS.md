@@ -123,6 +123,28 @@ pathlib.Path("file.py").write_text(content, encoding="utf-8")
 
 ---
 
+## DO NOT 6 — commit 후 push 없이 "작업 완료" 선언하지 않는다
+
+**What happened:**
+AGENTS.md, CLAUDE.md, MEMORY.md 등을 수정하고 커밋까지 완료했지만
+`git push`를 실행하지 않아 GitHub에 반영되지 않았다.
+다음 세션에서 원격 저장소와 로컬이 diverge 상태로 발견됐다.
+
+**Rule:**
+작업 완료 기준 = `git push` 성공 + 원격 저장소 반영 확인.
+커밋만 된 상태는 "작업 중"이다. push까지 완료해야 "작업 완료"다.
+
+**Instead:**
+```bash
+# 완료 선언 전 반드시 실행
+git push origin master
+
+# push 성공 확인
+git log --oneline origin/master -3  # 원격에 최신 커밋 반영 확인
+```
+
+---
+
 ## 점검 체크리스트 (작업 완료 전)
 
 ```
@@ -131,4 +153,5 @@ pathlib.Path("file.py").write_text(content, encoding="utf-8")
 [ ] 실제 배포 URL fetch로 기능 확인
 [ ] Render 최신 live deploy commit = git HEAD
 [ ] Python 파일 인코딩 UTF-8 NoBOM 확인
+[ ] git push 완료 + 원격 저장소 반영 확인 (push 없이 완료 선언 금지)
 ```

@@ -1,16 +1,20 @@
 """
-CNN Fear & Greed Index — Alternative.me 무료 API.
-https://api.alternative.me/fng/
-키 불필요, 무료, rate limit 없음.
+CNN Fear & Greed Index — 미국 주식시장 기반 7개 하위 지표 종합.
+https://production.dataviz.cnn.io/index/fearandgreed/graphdata/
+키 불필요, 리다이렉트 있음(follow_redirects=True 필요).
 """
 import httpx
 import logging
-from datetime import datetime
-import data_registry as dr
+from data_registry import record
 
 log = logging.getLogger(__name__)
 
-_API_URL = "https://api.alternative.me/fng/?limit=2&format=json"
+_API_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata/"
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json",
+    "Referer": "https://www.cnn.com/",
+}
 
 
 async def get_fear_greed() -> dict:
@@ -19,16 +23,16 @@ async def get_fear_greed() -> dict:
         { value: int, label: str, previous: int, change: int }
     """
     try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            resp = await client.get(_API_URL)
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(_API_URL, headers=_HEADERS)
             resp.raise_for_status()
-            data = resp.json()["data"]
+            fg = resp.json()["fear_and_greed"]
 
-        current = int(data[0]["value"])
-        previous = int(data[1]["value"]) if len(data) > 1 else current
-        label = data[0]["value_classification"]
+        current = round(float(fg["score"]))
+        previous = round(float(fg.get("previous_close", current)))
+        label = fg.get("rating", "Neutral").title()
 
-        dr.record("fg_index", "Alternative.me", False, current)
+        record("fg_index", "CNN", False, current)
         return {
             "value": current,
             "label": label,
@@ -36,6 +40,6 @@ async def get_fear_greed() -> dict:
             "change": current - previous,
         }
     except Exception as e:
-        log.warning(f"[FG] fear_greed fetch failed: {e}")
-        dr.record("fg_index", "Alternative.me", True)
+        log.warning(f"[FG] CNN fear_greed fetch failed: {e}")
+        record("fg_index", "CNN", True)
         return {"value": 50, "label": "Neutral", "previous": 50, "change": 0}
