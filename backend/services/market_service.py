@@ -103,7 +103,7 @@ async def build_market_response() -> MarketResponse:
 
     # 4. 포맷 헬퍼
     def _chg_color(up: bool) -> str:
-        return "var(--gr)" if up else "var(--re)"
+        return "var(--re)" if up else "var(--ac)"
 
     def _fmt_price(v, decimals=0) -> str:
         if v is None: return "—"

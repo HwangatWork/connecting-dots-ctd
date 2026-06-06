@@ -9,6 +9,15 @@ import data_registry as dr
 
 log = logging.getLogger(__name__)
 
+# pykrx 가용성 — 모듈 로드 시 1회만 체크 (pkg_resources 의존)
+try:
+    from pykrx import stock as _pykrx
+    _PYKRX_OK = True
+except Exception as _e:
+    log.warning(f"[KRX] pykrx disabled: {_e}")
+    _PYKRX_OK = False
+    _pykrx = None
+
 
 def _today() -> str:
     return datetime.now().strftime("%Y%m%d")
@@ -21,8 +30,12 @@ def _n_days_ago(n: int) -> str:
 def get_market_indices() -> dict:
     """코스피/코스닥 현재 지수."""
     result = {"kospi": None, "kosdaq": None}
+    if not _PYKRX_OK:
+        dr.record("krx_kospi", "pykrx", True)
+        dr.record("krx_kosdaq", "pykrx", True)
+        return result
     try:
-        from pykrx import stock
+        stock = _pykrx
         today = _today()
         one_week_ago = _n_days_ago(7)
 
@@ -66,8 +79,13 @@ def get_supply_data(days: int = 20) -> dict:
     Returns: { foreign, institution, individual } 각각 { amount_100m, direction }
     """
     result = {}
+    if not _PYKRX_OK:
+        dr.record("krx_foreign", "pykrx", True)
+        dr.record("krx_institution", "pykrx", True)
+        dr.record("krx_individual", "pykrx", True)
+        return result
     try:
-        from pykrx import stock
+        stock = _pykrx
         end = _today()
         start = _n_days_ago(days + 5)
 
@@ -103,8 +121,10 @@ def get_supply_data(days: int = 20) -> dict:
 
 def get_stock_price(code: str) -> Optional[dict]:
     """한국 종목 현재가 (코드: 6자리 숫자)."""
+    if not _PYKRX_OK:
+        return None
     try:
-        from pykrx import stock
+        stock = _pykrx
         today = _today()
         week_ago = _n_days_ago(7)
         df = stock.get_market_ohlcv(week_ago, today, code)
@@ -129,9 +149,11 @@ def get_stock_ohlcv(code: str, days: int = 180) -> Optional[object]:
     한국 종목 OHLCV 히스토리 반환 (기술적 지표 계산용).
     yfinance 컬럼 규격(Open/High/Low/Close/Volume)으로 변환해 반환.
     """
+    if not _PYKRX_OK:
+        return None
     try:
         import pandas as pd
-        from pykrx import stock
+        stock = _pykrx
         end = _today()
         start = _n_days_ago(days + 10)
         df = stock.get_market_ohlcv(start, end, code)
