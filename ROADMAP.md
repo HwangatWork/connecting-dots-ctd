@@ -66,7 +66,7 @@ hook: .claude/hooks/roadmap_runner.sh (Stop hook, exit 2)
 
 ## P0 보류 — FRED API 키 대기
 
-- [?] FRED 4개 복구 (US10Y/DXY/T10Y2Y/연준자산) — API 키 발급 후 진행 (fred.stlouisfed.org/docs/api/api_key.html)
+- [x] FRED 4개 복구 (US10Y/DXY/T10Y2Y/연준자산) — 공식 API 키 연동 완료 (api.stlouisfed.org, DGS10/DTWEXBGS/T10Y2Y/WALCL 실값 확인)
 
 ---
 
