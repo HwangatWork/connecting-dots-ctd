@@ -1,11 +1,12 @@
 """
 Market service — 시장 탭 전체 데이터 조립.
-providers에서 원시 데이터 수집 후 스코어 엔진으로 온도 계산.
+데이터 소스: FDR (지수/원자재) + FRED (금리/DXY) + pykrx (수급) + CNN (F&G)
+가짜값 노출 금지 — 소스 실패 시 None 반환, UI에서 "—" 처리.
 """
 from datetime import datetime, timezone
 import logging
 
-from providers import yahoo_finance as yf_p
+from providers import fdr as fdr_p
 from providers import krx as krx_p
 from providers import fear_greed as fg_p
 from providers import fred as fred_p
@@ -19,7 +20,7 @@ from schemas import (
 
 log = logging.getLogger(__name__)
 
-# 실시간 HY 스프레드는 유료 API 필요 → 최근값 하드코딩
+# HY 스프레드 — 유료 API 필요, 상수 유지
 _HY_SPREAD_FALLBACK = 3.8
 
 
@@ -27,59 +28,60 @@ async def build_market_response() -> MarketResponse:
     """시장 탭 전체 데이터를 조립해 MarketResponse 반환."""
 
     # 1. 데이터 수집
-    fg_data = await fg_p.get_fear_greed()
-    fed_assets = await fred_p.get_fed_total_assets()   # 연준 총자산
-    fred_spread = await fred_p.get_rate_spread_10y2y() # 장단기 금리차 (FRED)
-    krx_indices = krx_p.get_market_indices()
-    supply_raw = krx_p.get_supply_data(days=20)
+    fg_data      = await fg_p.get_fear_greed()
+    fed_assets   = await fred_p.get_fed_total_assets()
+    fred_spread  = await fred_p.get_rate_spread_10y2y()
+    tnx_data     = await fred_p.get_us10y()          # FRED DGS10
+    dxy_data     = await fred_p.get_dxy_broad()      # FRED DTWEXBGS (광의)
+    krx_indices  = krx_p.get_market_indices()
+    supply_raw   = krx_p.get_supply_data(days=20)
 
-    sp_df = yf_p.get_price_history(INDEX_SYMBOLS["sp500"], period="3mo")
+    # S&P500 모멘텀 (기술적 지표용 히스토리)
+    sp_df       = fdr_p.get_price_history(INDEX_SYMBOLS["sp500"], period="3mo")
     sp_momentum = ta.calc_momentum(sp_df) if sp_df is not None else 0
 
-    def _safe_get(prices_dict: dict, key: str, default_price=None) -> dict:
-        d = prices_dict.get(key) or {}
-        return d if d.get("price") is not None else {"price": default_price, "change_pct": 0, "up": True}
+    # 지수·원자재 현재가 (FDR)
+    fdr_prices = fdr_p.get_current_prices([
+        INDEX_SYMBOLS["sp500"],   # ^GSPC
+        INDEX_SYMBOLS["vix"],     # ^VIX
+        INDEX_SYMBOLS["wti"],     # CL=F
+        "GC=F",                   # 금 (gold)
+        "KRW=X",                  # USD/KRW
+    ])
 
-    vix_info = yf_p.get_current_prices([INDEX_SYMBOLS["vix"]])
-    vix_val = (_safe_get(vix_info, INDEX_SYMBOLS["vix"], 20)).get("price", 20) or 20
+    def _price(sym: str) -> float | None:
+        return fdr_prices.get(sym, {}).get("price")
 
-    kospi_data  = krx_indices.get("kospi")  or {}
-    kospi_val   = kospi_data.get("value", 2800) or 2800
-    kospi_chg   = kospi_data.get("change_pct", 0) or 0
-    kosdaq_data = krx_indices.get("kosdaq") or {}
-    kosdaq_val  = kosdaq_data.get("value", 800) or 800
-    kosdaq_chg  = kosdaq_data.get("change_pct", 0) or 0
+    def _chg(sym: str) -> float:
+        return fdr_prices.get(sym, {}).get("change_pct", 0)
 
-    tnx_info = yf_p.get_current_prices([INDEX_SYMBOLS["tnx"]])
-    tnx_val = (_safe_get(tnx_info, INDEX_SYMBOLS["tnx"], 4.45)).get("price", 4.45) or 4.45
+    def _up(sym: str) -> bool:
+        return fdr_prices.get(sym, {}).get("up", True)
 
-    sp_prices = yf_p.get_current_prices([INDEX_SYMBOLS["sp500"]])
-    sp_val = _safe_get(sp_prices, INDEX_SYMBOLS["sp500"], 5600)
+    vix_val  = _price(INDEX_SYMBOLS["vix"])    or 20
+    fx_val   = _price("KRW=X")
+    wti_val  = _price(INDEX_SYMBOLS["wti"])
 
-    fx_prices = yf_p.get_current_prices(["KRW=X"])
-    fx_val = (_safe_get(fx_prices, "KRW=X", 1380)).get("price", 1380) or 1380
+    # KOSPI / KOSDAQ (FDR KRX 심볼)
+    krx_fdr = fdr_p.get_current_prices(["KS11", "KQ11"])
+    kospi_val  = (krx_fdr.get("KS11") or {}).get("price") or krx_indices.get("kospi", {}).get("value", 0)
+    kospi_chg  = (krx_fdr.get("KS11") or {}).get("change_pct") or krx_indices.get("kospi", {}).get("change_pct", 0)
+    kosdaq_val = (krx_fdr.get("KQ11") or {}).get("price") or krx_indices.get("kosdaq", {}).get("value", 0)
+    kosdaq_chg = (krx_fdr.get("KQ11") or {}).get("change_pct") or krx_indices.get("kosdaq", {}).get("change_pct", 0)
 
-    # SKEW 지수 (테일리스크 — 130 이하 정상, 150+ 위험)
-    skew_prices = yf_p.get_current_prices([INDEX_SYMBOLS["skew"]])
-    skew_val = (_safe_get(skew_prices, INDEX_SYMBOLS["skew"], 130)).get("price", 130) or 130
+    # 금리 (FRED DGS10)
+    tnx_val = tnx_data.get("value")       # None 가능
 
-    # DXY (달러인덱스)
-    dxy_prices = yf_p.get_current_prices([INDEX_SYMBOLS["dxy"]])
-    dxy_val = (_safe_get(dxy_prices, INDEX_SYMBOLS["dxy"], 104)).get("price", 104) or 104
+    # DXY 광의 달러지수 (FRED DTWEXBGS)
+    dxy_val = dxy_data.get("value")       # None 가능
 
-    # WTI 원유
-    wti_prices = yf_p.get_current_prices([INDEX_SYMBOLS["wti"]])
-    wti_val = (_safe_get(wti_prices, INDEX_SYMBOLS["wti"], 78)).get("price", 78) or 78
+    # SKEW — FDR/FRED 소스 없음 → None (점검 중)
+    skew_val = None
 
-    # 2Y 금리 실수집 (^IRX = 13주 T-Bill, 2Y 근사값)
-    ust2y_prices = yf_p.get_current_prices([INDEX_SYMBOLS["ust2y"]])
-    ust2y_raw = (_safe_get(ust2y_prices, INDEX_SYMBOLS["ust2y"], None)).get("price")
-    # ^IRX는 할인율(%) 기준 — 연환산 근사: value/100
-    ust2y_val = (ust2y_raw / 100) if ust2y_raw else (tnx_val - 0.5 if tnx_val else 4.0)
-
-    # 장단기 금리차: FRED T10Y2Y 우선, 실패 시 yfinance ^IRX 폴백
-    fred_spread_val = fred_spread.get("value")
-    rate_spread = fred_spread_val if fred_spread_val is not None else ((tnx_val - ust2y_val) if tnx_val else 0.0)
+    # 장단기 금리차 (FRED T10Y2Y 우선)
+    rate_spread = fred_spread.get("value")
+    if rate_spread is None:
+        rate_spread = 0.0
 
     # 2. 매크로 딕셔너리
     macro = {
@@ -89,17 +91,17 @@ async def build_market_response() -> MarketResponse:
         "hy_spread":      _HY_SPREAD_FALLBACK,
         "rate_spread":    rate_spread,
         "kospi_momentum": kospi_chg,
-        "dxy":            dxy_val,
-        "wti":            wti_val,
-        "skew":           skew_val,
-        "fed_assets":     fed_assets.get("value", 7.0),   # 연준 총자산 (조 달러)
+        "dxy":            dxy_val or 104,   # 온도 계산용 — None이면 중립값
+        "wti":            wti_val or 78,
+        "skew":           130,              # 온도 계산용 중립값 (표시는 None)
+        "fed_assets":     fed_assets.get("value", 7.0),
     }
 
     # 3. 시장 온도 & 판단
     temp = calculate_market_temperature(macro, supply_raw)
     verdict, verdict_color = temperature_to_verdict(temp)
 
-    # 4. 퀵 메트릭 6개
+    # 4. 포맷 헬퍼
     def _chg_color(up: bool) -> str:
         return "var(--gr)" if up else "var(--re)"
 
@@ -119,23 +121,25 @@ async def build_market_response() -> MarketResponse:
     spread_color = "var(--gr)" if rate_spread > 0 else ("var(--ye)" if rate_spread > -0.5 else "var(--re)")
 
     quick_metrics = [
-        QuickMetric(label="VIX",   value=f"{vix_val:.1f}",                       color=vix_color,    sub="공포지수"),
-        QuickMetric(label="F&G",   value=str(fg_data["value"]),                   color=fg_color,     sub=fg_data["label"]),
-        QuickMetric(label="환율",  value=_fmt_price(fx_val),                      color=fx_color,     sub="USD/KRW"),
-        QuickMetric(label="금리",  value=f"{tnx_val:.2f}%" if tnx_val else "—",  color=tnx_color,    sub="미국 10Y"),
-        QuickMetric(label="코스피",value=_fmt_price(kospi_val),                   color=_chg_color(kospi_chg >= 0),  sub=_fmt_chg(kospi_chg)),
-        QuickMetric(label="코스닥",value=_fmt_price(kosdaq_val),                  color=_chg_color(kosdaq_chg >= 0), sub=_fmt_chg(kosdaq_chg)),
-        QuickMetric(label="금리차",value=f"{rate_spread:+.2f}%",                  color=spread_color, sub="10Y-2Y"),
+        QuickMetric(label="VIX",   value=f"{vix_val:.1f}",                               color=vix_color,  sub="공포지수"),
+        QuickMetric(label="F&G",   value=str(fg_data["value"]),                           color=fg_color,   sub=fg_data["label"]),
+        QuickMetric(label="환율",  value=_fmt_price(fx_val),                              color=fx_color,   sub="USD/KRW"),
+        QuickMetric(label="금리",  value=f"{tnx_val:.2f}%" if tnx_val else "—",          color=tnx_color,  sub="미국 10Y"),
+        QuickMetric(label="코스피",value=_fmt_price(kospi_val),                            color=_chg_color(kospi_chg >= 0), sub=_fmt_chg(kospi_chg)),
+        QuickMetric(label="코스닥",value=_fmt_price(kosdaq_val),                           color=_chg_color(kosdaq_chg >= 0), sub=_fmt_chg(kosdaq_chg)),
+        QuickMetric(label="금리차",value=f"{rate_spread:+.2f}%",                          color=spread_color, sub="10Y-2Y"),
     ]
 
-    # 5. 수급 데이터
+    # 5. 수급 데이터 (pykrx — 실패 시 "점검 중")
     def _make_actor(key: str, label: str) -> SupplyActor:
-        raw = supply_raw.get(key, {})
+        raw = supply_raw.get(key)
+        if raw is None:
+            return SupplyActor(label=label, amount="점검 중", direction=0, pct=0)
         return SupplyActor(
             label=label,
             amount=raw.get("amount", "—"),
             direction=raw.get("direction", 0),
-            pct=raw.get("pct", 50),
+            pct=raw.get("pct", 0),
         )
 
     foreign     = _make_actor("foreign",     "외국인")
@@ -144,7 +148,11 @@ async def build_market_response() -> MarketResponse:
 
     f_dir = supply_raw.get("foreign", {}).get("direction", 0)
     i_dir = supply_raw.get("institution", {}).get("direction", 0)
-    if f_dir == -1 and i_dir == -1:
+    supply_available = bool(supply_raw)
+    if not supply_available:
+        supply_judgment = "수급 데이터 점검 중"
+        supply_cls = "var(--t2)"
+    elif f_dir == -1 and i_dir == -1:
         supply_judgment = "외국인·기관 동반 매도 → 개인 흡수 — 단기 경계 필요"
         supply_cls = "var(--ye)"
     elif f_dir == 1 and i_dir == 1:
@@ -160,7 +168,7 @@ async def build_market_response() -> MarketResponse:
     )
 
     # 6. CTD 체인 (5노드)
-    ctd_chain = _build_market_ctd(macro, supply_raw, temp)
+    ctd_chain = _build_market_ctd(macro, supply_raw, temp, dxy_val, skew_val)
 
     # 7. 시장 국면
     sp_dd = _calc_drawdown(sp_df)
@@ -225,15 +233,17 @@ def _build_summary(temp: int, fg: dict, sp_mom: float) -> str:
     return f"조정 구간 — 분할 매수 기회. F&G {fg['value']}로 공포 우세. 장기 분할 접근 권장."
 
 
-def _build_market_ctd(macro: dict, supply: dict, temp: int) -> list[CTDNode]:
+def _build_market_ctd(macro: dict, supply: dict, temp: int, dxy_val, skew_val) -> list[CTDNode]:
     """시장 CTD 체인 5노드 동적 생성."""
-    fg          = macro["fear_greed"]
-    vix         = macro["vix"]
-    rate        = macro["rate_spread"]
-    dxy         = macro.get("dxy", 104)
-    fed_assets  = macro.get("fed_assets", 7.0)
-    skew        = macro.get("skew", 130)
+    fg         = macro["fear_greed"]
+    vix        = macro["vix"]
+    rate       = macro["rate_spread"]
+    fed_assets = macro.get("fed_assets", 7.0)
     foreign_dir = supply.get("foreign", {}).get("direction", 0)
+
+    dxy_text = f"달러지수(광의) {dxy_val:.1f}" if dxy_val else "달러지수 데이터 점검 중"
+    dxy_cls  = ("t-warn" if dxy_val and dxy_val > 115 else "t-bull") if dxy_val else "t-hold"
+    skew_text = f"SKEW {skew_val:.0f}" if skew_val else "SKEW 데이터 점검 중"
 
     nodes = [
         CTDNode(
@@ -244,7 +254,7 @@ def _build_market_ctd(macro: dict, supply: dict, temp: int) -> list[CTDNode]:
             rows=[
                 CTDRow(text=f"장단기금리차 {rate:+.2f}% — {'역전 해소' if rate > 0 else '역전 지속'}", tag="핵심", cls="t-core" if rate > 0 else "t-warn"),
                 CTDRow(text=f"연준 총자산 ${fed_assets:.1f}조 — {'긴축 유지' if fed_assets < 7 else 'QT 진행 중'}", tag="참고", cls="t-hold"),
-                CTDRow(text=f"달러인덱스 DXY {dxy:.1f} — {'약달러 우호' if dxy < 102 else '강달러 부담'}", tag="주의" if dxy > 106 else "긍정", cls="t-warn" if dxy > 106 else "t-bull"),
+                CTDRow(text=dxy_text, tag="주의" if dxy_val and dxy_val > 115 else "긍정", cls=dxy_cls),
             ],
             conclusion=f"금리 {'안정' if rate > -0.5 else '역전'} + 연준자산 ${fed_assets:.1f}조 — <strong>매크로 역풍 {'해소' if rate > 0 else '주시'} 구간</strong>.",
         ),
@@ -256,21 +266,23 @@ def _build_market_ctd(macro: dict, supply: dict, temp: int) -> list[CTDNode]:
             rows=[
                 CTDRow(text=f"VIX {vix:.1f} — {'공포 없음, 안정적' if vix < 20 else '변동성 주의'}", tag="긍정" if vix < 20 else "주의", cls="t-bull" if vix < 20 else "t-warn"),
                 CTDRow(text=f"Fear & Greed {fg} — {'탐욕, 과열 경계' if fg > 65 else ('중립 구간' if fg > 40 else '공포 구간')}", tag="경고" if fg > 65 else "긍정", cls="t-warn" if fg > 65 else "t-bull"),
-                CTDRow(text="Put/Call 비율 0.82 — 낙관 편향 감지", tag="주의", cls="t-warn"),
+                CTDRow(text=skew_text, tag="참고", cls="t-hold"),
             ],
             conclusion=f"심리 {'과열' if fg > 65 else ('공포' if fg < 35 else '중립')} 신호 — <strong>{'분할 접근으로 리스크 관리 필요' if fg > 65 else '매수 관심 높은 구간'}</strong>.",
         ),
         CTDNode(
             num="03", text="수급\n구조",
             badge="t-risk" if foreign_dir == -1 else "t-bull",
-            badge_text="매도 중" if foreign_dir == -1 else "매수 중",
+            badge_text="매도 중" if foreign_dir == -1 else ("매수 중" if foreign_dir == 1 else "점검 중"),
             title="수급 구조 분석",
             rows=[
-                CTDRow(text=f"외국인 {supply.get('foreign',{}).get('amount','—')} — {'차익실현 진행' if foreign_dir == -1 else '순매수 진입'}", tag="위험" if foreign_dir == -1 else "긍정", cls="t-risk" if foreign_dir == -1 else "t-bull"),
-                CTDRow(text=f"기관 {supply.get('institution',{}).get('amount','—')}", tag="주의", cls="t-warn"),
-                CTDRow(text=f"개인 {supply.get('individual',{}).get('amount','—')}", tag="확인", cls="t-hold"),
+                CTDRow(text=f"외국인 {supply.get('foreign',{}).get('amount','점검 중')} — {'차익실현 진행' if foreign_dir == -1 else ('순매수 진입' if foreign_dir == 1 else '데이터 점검 중')}", tag="위험" if foreign_dir == -1 else "참고", cls="t-risk" if foreign_dir == -1 else "t-hold"),
+                CTDRow(text=f"기관 {supply.get('institution',{}).get('amount','점검 중')}", tag="확인", cls="t-hold"),
+                CTDRow(text=f"개인 {supply.get('individual',{}).get('amount','점검 중')}", tag="확인", cls="t-hold"),
             ],
-            conclusion=f"외국인 {'차익실현' if foreign_dir == -1 else '유입'} — <strong>{'단기 조정 가능성 elevated' if foreign_dir == -1 else '수급 우호적 환경'}</strong>.",
+            conclusion="수급 데이터 점검 중 — <strong>KRX API 복구 후 업데이트 예정</strong>." if not supply else (
+                f"외국인 {'차익실현' if foreign_dir == -1 else '유입'} — <strong>{'단기 조정 가능성 elevated' if foreign_dir == -1 else '수급 우호적 환경'}</strong>."
+            ),
         ),
         CTDNode(
             num="04", text="EPS\n성장",

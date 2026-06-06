@@ -1,9 +1,8 @@
 from fastapi import APIRouter
 from datetime import datetime, timezone
 
-from providers import yahoo_finance as yf_p
-from providers import krx as krx_p
-from config import INDEX_SYMBOLS, CACHE_TTL
+from providers import fdr as fdr_p
+from config import CACHE_TTL
 from cache import cache
 from schemas import TickerResponse, TickerItem
 
@@ -18,19 +17,18 @@ async def get_ticker():
 
     items: list[TickerItem] = []
 
-    # ── 1. 야후 파이낸스 지수 (S&P, NASDAQ, VIX, WTI, 금) ──────────
+    # ── 1. 글로벌 지수 + 원자재 (FDR) ────────────────────────────
+    # 야후 심볼 키 사용 — fdr.py 내부에서 FDR 심볼로 변환
     yf_symbols = {
-        "S&P 500": INDEX_SYMBOLS["sp500"],
-        "NASDAQ":  INDEX_SYMBOLS["nasdaq"],
-        "DOW":     INDEX_SYMBOLS["dow"],
-        "닛케이":  INDEX_SYMBOLS["nikkei"],
-        "VIX":     INDEX_SYMBOLS["vix"],
-        "WTI":     INDEX_SYMBOLS["wti"],
+        "S&P 500": "^GSPC",
+        "NASDAQ":  "^IXIC",
+        "DOW":     "^DJI",
+        "닛케이":  "^N225",
+        "VIX":     "^VIX",
+        "WTI":     "CL=F",
         "금":      "GC=F",
-        "SKEW":    INDEX_SYMBOLS["skew"],
-        "DXY":     INDEX_SYMBOLS["dxy"],
     }
-    prices = yf_p.get_current_prices(list(yf_symbols.values()))
+    prices = fdr_p.get_current_prices(list(yf_symbols.values()))
 
     for label, sym in yf_symbols.items():
         d = prices.get(sym, {})
@@ -40,8 +38,8 @@ async def get_ticker():
             val = f"{p:,.0f}" if p > 100 else f"{p:.2f}"
             items.append(TickerItem(label=label, value=val, change=f"{c:+.2f}%", up=d.get("up", True)))
 
-    # ── 2. USD/KRW ──────────────────────────────────────────────────
-    fx = yf_p.get_current_prices(["KRW=X"])
+    # ── 2. USD/KRW (FDR) ─────────────────────────────────────────
+    fx = fdr_p.get_current_prices(["KRW=X"])
     fx_v = fx.get("KRW=X", {})
     if fx_v.get("price"):
         items.append(TickerItem(
@@ -51,19 +49,18 @@ async def get_ticker():
             up=fx_v.get("up", True),
         ))
 
-    # ── 3. KRX 지수 (코스피, 코스닥) ────────────────────────────────
-    krx_data = krx_p.get_market_indices()
-    for label, key in [("코스피", "kospi"), ("코스닥", "kosdaq")]:
-        d = krx_data.get(key) or {}
-        if d.get("value"):
+    # ── 3. KOSPI / KOSDAQ (FDR — KRX 심볼 직접 사용) ─────────────
+    krx = fdr_p.get_current_prices(["KS11", "KQ11"])
+    for label, sym in [("코스피", "KS11"), ("코스닥", "KQ11")]:
+        d = krx.get(sym, {})
+        if d.get("price"):
             items.append(TickerItem(
                 label=label,
-                value=f"{d['value']:,.0f}",
+                value=f"{d['price']:,.0f}",
                 change=f"{d.get('change_pct', 0):+.2f}%",
                 up=d.get("up", True),
             ))
 
-    # 데이터가 없으면 최소 placeholder 유지
     if not items:
         items = [TickerItem(label="S&P 500", value="—", change="—", up=True)]
 

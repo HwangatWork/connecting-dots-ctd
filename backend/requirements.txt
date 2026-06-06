@@ -4,6 +4,7 @@ pydantic==2.10.3
 pydantic-settings==2.7.0
 httpx==0.28.1
 yfinance==0.2.51
+finance-datareader==0.9.93
 pykrx==1.0.47
 pandas==2.2.3
 python-dotenv==1.0.1

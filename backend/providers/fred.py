@@ -69,17 +69,54 @@ async def get_fed_total_assets() -> dict:
 
 async def get_rate_spread_10y2y() -> dict:
     """
-    장단기 금리차 T10Y2Y — 실시간 yfinance 보조.
+    장단기 금리차 T10Y2Y.
     Returns: { value: float (%), date: str }
     """
     rows = await get_series("T10Y2Y", periods=3)
     if not rows:
         dr.record("fred_t10y2y", "FRED", True)
-        return {"value": 0.0, "date": "—", "source": "fallback"}
+        return {"value": None, "date": "—", "source": "fallback"}
     latest = rows[-1]
     dr.record("fred_t10y2y", "FRED", False, f"{latest['value']:.2f}%")
     return {
         "value":  latest["value"],
         "date":   latest["date"],
         "source": "FRED T10Y2Y",
+    }
+
+
+async def get_us10y() -> dict:
+    """
+    미국 10년물 국채 금리 (DGS10).
+    Returns: { value: float (%) | None, date: str }
+    """
+    rows = await get_series("DGS10", periods=3)
+    if not rows:
+        dr.record("fred_dgs10", "FRED", True)
+        return {"value": None, "date": "—", "source": "fallback"}
+    latest = rows[-1]
+    dr.record("fred_dgs10", "FRED", False, f"{latest['value']:.2f}%")
+    return {
+        "value":  latest["value"],
+        "date":   latest["date"],
+        "source": "FRED DGS10",
+    }
+
+
+async def get_dxy_broad() -> dict:
+    """
+    달러인덱스 광의 (DTWEXBGS — Trade Weighted US Dollar Index: Broad).
+    ICE DXY (~100)와 다른 지수 — 표시 시 '달러지수(광의)' 레이블 사용.
+    Returns: { value: float | None, date: str }
+    """
+    rows = await get_series("DTWEXBGS", periods=3)
+    if not rows:
+        dr.record("fred_dxy", "FRED", True)
+        return {"value": None, "date": "—", "source": "fallback"}
+    latest = rows[-1]
+    dr.record("fred_dxy", "FRED", False, f"{latest['value']:.1f}")
+    return {
+        "value":  latest["value"],
+        "date":   latest["date"],
+        "source": "FRED DTWEXBGS",
     }
