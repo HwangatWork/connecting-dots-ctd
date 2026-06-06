@@ -1,12 +1,12 @@
 """
 Stock service — assembles Zone 4 full stock detail response.
-Collects data from yfinance + pykrx and builds StockDetailResponse.
+Collects data from FDR + pykrx and builds StockDetailResponse.
 """
 from datetime import datetime, timezone
 from typing import Optional
 import logging
 
-from providers import yahoo_finance as yf_p
+from providers import fdr as fdr_p
 from providers import krx as krx_p
 from services import technical as ta
 from services.score_engine import calculate_iq_score, calc_dcf_upside
@@ -34,7 +34,7 @@ async def get_stocks_list(group: str) -> list[StockListItem]:
                 up = price_data["up"] if price_data else True
                 price_str = f"₩{price_val:,}" if price_val else "—"
             else:
-                prices = yf_p.get_current_prices([s["yahoo"]])
+                prices = fdr_p.get_current_prices([s["yahoo"]])
                 pd_ = prices.get(s["yahoo"], {})
                 price_val = pd_.get("price")
                 chg = pd_.get("change_pct", 0)
@@ -43,13 +43,13 @@ async def get_stocks_list(group: str) -> list[StockListItem]:
 
             chg_str = f"{'+' if chg >= 0 else ''}{chg:.1f}%"
 
-            # 국내 종목은 pykrx OHLCV 우선, 실패 시 yfinance 폴백
+            # 국내 종목은 pykrx OHLCV 우선, 실패 시 FDR 폴백
             if group == "domestic":
-                df = krx_p.get_stock_ohlcv(s["code"]) or yf_p.get_price_history(s["yahoo"], period="6mo")
+                df = krx_p.get_stock_ohlcv(s["code"]) or fdr_p.get_price_history(s["yahoo"], period="6mo")
             else:
-                df = yf_p.get_price_history(s["yahoo"], period="6mo")
+                df = fdr_p.get_price_history(s["yahoo"], period="6mo")
             tech = ta.calc_all(df) if df is not None else {}
-            info = yf_p.get_ticker_info(s["yahoo"])
+            info = fdr_p.get_ticker_info(s["yahoo"])
             score_data = calculate_iq_score(info, tech, {}, {}, group == "domestic")
             score = score_data["overall"]
 
@@ -75,17 +75,17 @@ async def get_stock_detail(code: str) -> StockDetailResponse:
 
     is_domestic = meta["group"] == "domestic"
 
-    # 국내 종목은 pykrx OHLCV 우선, 실패 시 yfinance 폴백
+    # 국내 종목은 pykrx OHLCV 우선, 실패 시 FDR 폴백
     if is_domestic:
-        df = krx_p.get_stock_ohlcv(code) or yf_p.get_price_history(meta["yahoo"], period="6mo")
+        df = krx_p.get_stock_ohlcv(code) or fdr_p.get_price_history(meta["yahoo"], period="6mo")
         krx_price = krx_p.get_stock_price(code)
         supply_raw = krx_p.get_supply_data(days=20)
     else:
-        df = yf_p.get_price_history(meta["yahoo"], period="6mo")
+        df = fdr_p.get_price_history(meta["yahoo"], period="6mo")
         krx_price = None
         supply_raw = {}
 
-    info = yf_p.get_ticker_info(meta["yahoo"])
+    info = fdr_p.get_ticker_info(meta["yahoo"])
     tech = ta.calc_all(df) if df is not None else {}
 
     if is_domestic and krx_price:
@@ -94,7 +94,7 @@ async def get_stock_detail(code: str) -> StockDetailResponse:
         up = krx_price["up"]
         price_str = f"₩{price_val:,}"
     else:
-        prices = yf_p.get_current_prices([meta["yahoo"]])
+        prices = fdr_p.get_current_prices([meta["yahoo"]])
         pd_ = prices.get(meta["yahoo"], {})
         price_val = pd_.get("price", 0)
         chg_pct = pd_.get("change_pct", 0)

@@ -54,13 +54,10 @@ hook: .claude/hooks/roadmap_runner.sh (Stop hook, exit 2)
 
 ## P0 — 데이터 정확성 (즉시)
 
-- [?] FRED 복구 방식 결정 — 공식 API 키(대표님 발급 필요) vs 대체 소스
-  - 현재 상태: fredgraph.csv 엔드포인트 타임아웃 (US10Y/DXY/T10Y2Y/WALCL 전부 "—")
-  - 옵션 A: FRED 무료 API 키 발급 → api.stlouisfed.org 사용
-  - 옵션 B: 대체 소스 탐색 (finance-datareader FRED 리더 시도)
-- [ ] (위 결정 후) FRED 4개 복구 (US10Y/DXY/T10Y2Y/연준자산)
-- [ ] yfinance 잔재 호출 경로 완전 제거 (Render 로그 429 박멸)
+- [x] FRED 복구 방식 결정 — 옵션 A (공식 API 키, api.stlouisfed.org)
+- [x] yfinance 잔재 호출 경로 완전 제거 (Render 로그 429 박멸)
 - [ ] 하드코딩 지표 확인 (M2/역RP/FED자산/HY스프레드) → 실데이터 or "점검 중"
+- [?] FRED 4개 복구 (US10Y/DXY/T10Y2Y/연준자산) — API 키 발급 후 진행 (fred.stlouisfed.org/docs/api/api_key.html)
 
 ## P1 — UX/UI
 

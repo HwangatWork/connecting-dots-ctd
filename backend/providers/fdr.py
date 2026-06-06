@@ -68,6 +68,24 @@ def _validate(yahoo_sym: str, price: float) -> bool:
     return ok
 
 
+def _yahoo_to_fdr(yahoo_sym: str) -> str:
+    """Yahoo Finance 심볼 → FDR 심볼 변환.
+    우선순위: _FDR_MAP → .KS/.KQ 스트립 → 그대로 사용(US 주식)."""
+    if yahoo_sym in _FDR_MAP:
+        return _FDR_MAP[yahoo_sym]
+    # 한국 종목: 000660.KS → 000660
+    for suffix in (".KS", ".KQ"):
+        if yahoo_sym.endswith(suffix):
+            return yahoo_sym[: -len(suffix)]
+    # US 주식 (NVDA, MSFT 등) → 그대로
+    return yahoo_sym
+
+
+def get_ticker_info(symbol: str) -> dict:
+    """Fundamental 데이터 — FDR 미지원, 빈 dict 반환."""
+    return {}
+
+
 def get_current_prices(symbols: list[str]) -> dict[str, dict]:
     """
     배치 현재가 조회. yfinance.get_current_prices()와 동일 반환 형식.
@@ -85,12 +103,7 @@ def get_current_prices(symbols: list[str]) -> dict[str, dict]:
     end = datetime.now()
 
     for yahoo_sym in symbols:
-        fdr_sym = _FDR_MAP.get(yahoo_sym)
-        if fdr_sym is None:
-            # 매핑 없는 심볼 (SKEW 등) → 등록하지 않음
-            log.debug(f"[FDR] No mapping for {yahoo_sym}, skipping")
-            dr.record(f"yf_{yahoo_sym}", "FDR", True)
-            continue
+        fdr_sym = _yahoo_to_fdr(yahoo_sym)
         try:
             df = fdr.DataReader(fdr_sym, start, end)
             if df is None or df.empty or "Close" not in df.columns:
@@ -131,9 +144,7 @@ def get_price_history(yahoo_symbol: str, period: str = "6mo", interval: str = "1
         log.error(f"[FDR] finance-datareader import failed: {e}")
         return None
 
-    fdr_sym = _FDR_MAP.get(yahoo_symbol)
-    if fdr_sym is None:
-        return None
+    fdr_sym = _yahoo_to_fdr(yahoo_symbol)
 
     try:
         days = {"1mo": 35, "3mo": 100, "6mo": 185, "1y": 370}.get(period, 185)

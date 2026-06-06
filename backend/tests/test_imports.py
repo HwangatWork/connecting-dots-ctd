@@ -18,7 +18,7 @@ MODULES = [
     "services.stock_service",
     "services.score_engine",
     "services.technical",
-    "providers.yahoo_finance",
+    "providers.fdr",
     "providers.krx",
     "providers.fear_greed",
     "providers.fred",
