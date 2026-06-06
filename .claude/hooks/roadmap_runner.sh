@@ -49,6 +49,11 @@ ITEM=$(echo "$NEXT_LINE" | sed 's/^[0-9]*:- //')
 
 # ── [?] 판단 필요 (Bug3: 반복 카운트) ──────────────────────────────────────
 if echo "$ITEM" | grep -q '^\[?\]'; then
+  # hook-triggered 턴에서는 이미 [?] 메시지를 보냈으므로 반복하지 않음
+  if [ "${STOP_HOOK_ACTIVE:-0}" = "1" ] || [ "${STOP_HOOK_ACTIVE:-0}" = "true" ]; then
+    exit 0
+  fi
+
   TEXT=$(echo "$ITEM" | sed 's/^\[?\] //')
 
   if [ "$TEXT" = "$Q_TASK" ]; then
