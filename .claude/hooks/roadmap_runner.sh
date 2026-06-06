@@ -87,13 +87,51 @@ TASK_TEXT=$(echo "$ITEM" | sed 's/^\[ \] //')
 
 # ── 동일 태스크 재진입 (미완료 감지) ────────────────────────────────────────
 if [ "$TASK_TEXT" = "$LAST_TASK" ]; then
-  EVIDENCE_TS=$(file_mtime "$EVIDENCE_FILE")
-
-  # hook-triggered 완료 턴에서만 실패 카운트 증가 ("1" 또는 "true" 모두 처리)
+  IS_HOOK=0
   if [ "${STOP_HOOK_ACTIVE:-0}" = "1" ] || [ "${STOP_HOOK_ACTIVE:-0}" = "true" ]; then
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-    sed -i "s|^FAIL_COUNT:.*|FAIL_COUNT:$FAIL_COUNT|" "$STATE_FILE"
+    IS_HOOK=1
   fi
+
+  EVIDENCE_TS=$(file_mtime "$EVIDENCE_FILE")
+  EVIDENCE_VALID=0
+  if [ "$EVIDENCE_TS" -gt "$START_TS" ] && grep -qF "$TASK_TEXT" "$EVIDENCE_FILE" 2>/dev/null; then
+    EVIDENCE_VALID=1
+  fi
+
+  # ── Claude 응답 턴 (hook-triggered) ─────────────────────────────────────
+  if [ "$IS_HOOK" = "1" ]; then
+    if [ "$EVIDENCE_VALID" = "1" ]; then
+      # 증거 있음 → [x] 체크 리마인드
+      cat <<MSG
+⚠️ [검증 통과, [x] 미체크]
+태스크: $TASK_TEXT
+
+.claude/.last_evidence 가 갱신됐지만 ROADMAP.md 에 [x] 가 없습니다.
+해당 줄의 [ ] 를 [x] 로 체크 후 완료 보고하세요.
+MSG
+      exit 2
+    else
+      # 증거 없음 → Claude 작업 중, 조용히 대기 (재지시 금지)
+      exit 0
+    fi
+  fi
+
+  # ── 사용자 직접 입력 턴 (STOP_HOOK_ACTIVE=0) ────────────────────────────
+  if [ "$EVIDENCE_VALID" = "1" ]; then
+    # 증거 있음 → FAIL_COUNT 증가 없이 [x] 리마인드
+    cat <<MSG
+⚠️ [검증 통과, [x] 미체크] (시도 $FAIL_COUNT/$MAX_FAIL)
+태스크: $TASK_TEXT
+
+.claude/.last_evidence 가 갱신됐지만 ROADMAP.md 에 [x] 가 없습니다.
+해당 줄의 [ ] 를 [x] 로 체크 후 완료 보고하세요.
+MSG
+    exit 2
+  fi
+
+  # 증거 없음 + 사용자 직접 → 실패 카운트 증가 후 재지시
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+  sed -i "s|^FAIL_COUNT:.*|FAIL_COUNT:$FAIL_COUNT|" "$STATE_FILE"
 
   if [ "$FAIL_COUNT" -ge "$MAX_FAIL" ]; then
     rm -f "$STATE_FILE"
@@ -107,22 +145,7 @@ MSG
     exit 2
   fi
 
-  # Bug2: mtime + TASK_TEXT grep 둘 다 확인 (옛 증거 오인 방지)
-  EVIDENCE_VALID=0
-  if [ "$EVIDENCE_TS" -gt "$START_TS" ] && grep -qF "$TASK_TEXT" "$EVIDENCE_FILE" 2>/dev/null; then
-    EVIDENCE_VALID=1
-  fi
-
-  if [ "$EVIDENCE_VALID" = "1" ]; then
-    cat <<MSG
-⚠️ [검증 통과, [x] 미체크] (시도 $FAIL_COUNT/$MAX_FAIL)
-태스크: $TASK_TEXT
-
-.claude/.last_evidence 가 갱신됐지만 ROADMAP.md 에 [x] 가 없습니다.
-해당 줄의 [ ] 를 [x] 로 체크 후 완료 보고하세요.
-MSG
-  else
-    cat <<MSG
+  cat <<MSG
 ❌ [증거 없음, 재실행] (시도 $FAIL_COUNT/$MAX_FAIL)
 태스크: $TASK_TEXT
 
@@ -134,7 +157,6 @@ MSG
 
 기록 후 ROADMAP.md [ ] → [x] 체크 + 완료 보고하세요.
 MSG
-  fi
   exit 2
 fi
 
