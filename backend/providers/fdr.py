@@ -76,8 +76,8 @@ def get_current_prices(symbols: list[str]) -> dict[str, dict]:
     """
     try:
         import FinanceDataReader as fdr
-    except ImportError:
-        log.error("[FDR] finance-datareader not installed")
+    except ImportError as e:
+        log.error(f"[FDR] finance-datareader import failed: {e}")
         return {}
 
     result: dict[str, dict] = {}
@@ -127,7 +127,8 @@ def get_price_history(yahoo_symbol: str, period: str = "6mo", interval: str = "1
     """
     try:
         import FinanceDataReader as fdr
-    except ImportError:
+    except ImportError as e:
+        log.error(f"[FDR] finance-datareader import failed: {e}")
         return None
 
     fdr_sym = _FDR_MAP.get(yahoo_symbol)
