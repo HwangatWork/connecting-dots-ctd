@@ -31,9 +31,22 @@
       "mcp__render__query_render_postgres",
       "mcp__render__create_static_site",
       "mcp__render__update_static_site",
-      "mcp__render__list_deploys",
       "WebFetch(*)",
       "WebSearch(*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/roadmap_runner.sh",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
