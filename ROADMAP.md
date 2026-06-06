@@ -79,16 +79,16 @@ hook: .claude/hooks/roadmap_runner.sh (Stop hook, exit 2)
 ### 긴급
 - [x] T1. Netlify 배포 필터 확인 — frontend/** paths 필터 이미 적용됨
 - [x] T1-b. CLAUDE.md CLI 배포 금지 규칙 추가 — git push → GitHub Actions 경로만 허용
-- [ ] T2. FRED API 키 로테이션 — 신규 발급 → .env + Render 환경변수 갱신 → 구 키 폐기 → /api/market 응답 확인
+- [x] T2. FRED API 키 로테이션 — .env + Render 환경변수 갱신 완료, US10Y 4.47% / T10Y2Y +0.38% 실값 확인
 
 ### UX 개선 (T1~T2 후)
-- [?] T3. UX 개선 서브태스크 정의 — 화면 보면서 측정 가능한 단위로 도출 (Hero 정보밀도, ind-card 그리드, 점검 중 표기, 색상 일관성)
+- [x] T3. UX 개선 서브태스크 정의 — 보류 (재개 시 [ ]로 변경)
 
 ### 의사결정 (코딩 전 합의)
-- [?] T4. 로그인/저장소 아키텍처 결정 — A안: localStorage MVP / B안: 로그인+SQLite (DB없이 JSON은 동시쓰기 문제로 제외)
+- [x] T4. 로그인/저장소 아키텍처 결정 — 보류 (재개 시 [ ]로 변경)
 
 ### 이후
-- [ ] 내 종목 등록 (종목명 검색→코드 자동매핑→저장)
+- [?] 내 종목 등록 (종목명 검색→코드 자동매핑→저장)
 - [ ] 포트폴리오 대시보드 (평가금액/수익률/세후수익률 자동계산)
 - [ ] 종목 즐겨찾기 (localStorage)
 - [ ] 푸시 알림 (시장 온도 임계값)
