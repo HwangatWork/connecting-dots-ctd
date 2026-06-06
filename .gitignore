@@ -33,3 +33,6 @@ Thumbs.db
 # 임시
 *.tmp
 *.bak
+
+# Claude Code 로컬 권한 설정 (자동 생성, 커밋 불필요)
+.claude/settings.local.json
