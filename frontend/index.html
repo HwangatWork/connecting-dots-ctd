@@ -2460,6 +2460,14 @@ async function fetchStatusData() {
   if (data.supply) _applySupplyToStatus(data.supply);
 }
 
+function _badgeFromItem(it) {
+  if (!it || it.value === '—' || it.value == null)
+    return { cls: 't-hold', text: '점검 중' };
+  if (it.up) return { cls: 't-bull', text: '강세' };
+  if (it.change && it.change.startsWith('-')) return { cls: 't-warn', text: '약세' };
+  return { cls: 't-hold', text: '중립' };
+}
+
 function _applyTickerToStatus(items) {
   const map = {};
   for (const it of (items || [])) map[it.label] = it;
@@ -2479,12 +2487,17 @@ function _applyTickerToStatus(items) {
   ];
   for (const [label, valId, chgId] of pairs) {
     const it = map[label];
-    if (!it) continue;
-    const cls = it.up ? 'up' : it.change && it.change.startsWith('-') ? 'dn' : 'nt';
+    const cls = it ? (it.up ? 'up' : it.change && it.change.startsWith('-') ? 'dn' : 'nt') : 'nt';
     const vEl = document.getElementById(valId);
     const cEl = document.getElementById(chgId);
-    if (vEl) { vEl.textContent = it.value; vEl.className = 'ic-val ' + cls; }
-    if (cEl) { cEl.textContent = it.change; cEl.className = 'ic-chg ' + cls; }
+    if (vEl) {
+      vEl.textContent = it ? it.value : '—';
+      vEl.className = 'ic-val ' + cls;
+      const badge = _badgeFromItem(it);
+      const sigEl = vEl.closest('.ind-card')?.querySelector('.ic-sig');
+      if (sigEl) { sigEl.className = 'badge ' + badge.cls + ' ic-sig'; sigEl.textContent = badge.text; }
+    }
+    if (cEl) { cEl.textContent = it ? it.change : '—'; cEl.className = 'ic-chg ' + cls; }
   }
 }
 
