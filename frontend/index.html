@@ -136,8 +136,8 @@ a { color:inherit; text-decoration:none; }
 .ticker-label { color:var(--t3); }
 .ticker-val { color:var(--t1); font-weight:500; }
 .ticker-chg { }
-.up { color:var(--gr); }
-.dn { color:var(--re); }
+.up { color:var(--re); }
+.dn { color:var(--ac); }
 .nt { color:var(--t3); }
 @keyframes ticker-scroll {
   from { transform:translateX(0); }
@@ -676,12 +676,12 @@ a { color:inherit; text-decoration:none; }
   font-family:var(--font-mono); font-size:15px; font-weight:700;
   line-height:1.2; color:var(--t1);
 }
-.ic-val.up { color:var(--gr); }
-.ic-val.dn { color:var(--re); }
+.ic-val.up { color:var(--re); }
+.ic-val.dn { color:var(--ac); }
 .ic-val.nt { color:var(--t2); }
 .ic-chg { font-size:10px; font-weight:500; color:var(--t3); }
-.ic-chg.up { color:var(--gr); }
-.ic-chg.dn { color:var(--re); }
+.ic-chg.up { color:var(--re); }
+.ic-chg.dn { color:var(--ac); }
 .ic-sig { margin-top:3px; }
 .tb-gear {
   font-size:17px; opacity:.65; padding:2px 4px; margin-left:4px;
@@ -1697,7 +1697,7 @@ function renderZone4() {
   const s = getStock();
   if (!s) return;
   const card = document.getElementById('z4-card');
-  const chgColor = s.up ? 'var(--gr)' : 'var(--re)';
+  const chgColor = s.up ? 'var(--re)' : 'var(--ac)';
 
   card.innerHTML = `
     <!-- Header -->
@@ -2166,7 +2166,7 @@ function renderZone4FromAPI(detail) {
   const card = document.getElementById('z4-card');
   if (!card) return;
 
-  const chgColor = h.up ? 'var(--gr)' : 'var(--re)';
+  const chgColor = h.up ? 'var(--re)' : 'var(--ac)';
 
   card.innerHTML = `
     <div class="z4-header">
