@@ -3,9 +3,43 @@
 """
 from fastapi import APIRouter, Header, HTTPException
 from datetime import datetime, timezone
+import time
 import data_registry as dr
 
 router = APIRouter()
+
+# ── 허용 범위: (min, max) — 이탈 시 'warn' 플래그 ──────────────────
+RANGE_BOUNDS: dict[str, tuple[float, float]] = {
+    "yf_^VIX":      (10.0,   80.0),   # VIX 10 미만 = 비정상 낮음, 80 초과 = 극단적 공포
+    "fg_index":     (0.0,   100.0),   # CNN F&G 0-100
+    "krx_kospi":    (1500.0, 3500.0), # 코스피 정상 범위
+    "yf_^TNX":      (0.3,    7.0),    # 미국 10년물 금리 %
+    "yf_DX-Y.NYB":  (80.0,  130.0),  # DXY 달러인덱스
+    "yf_^SKEW":     (100.0,  180.0),  # CBOE SKEW
+    "fred_t10y2y":  (-3.0,   5.0),    # 장단기금리차
+}
+
+# ── TTL 기준 (초) — 초과 시 stale ────────────────────────────────
+_STALE_THRESHOLD = 900  # 15분: market 300s * 3
+
+
+def _check_range(ind_id: str, value_hint: str | None) -> str:
+    """Returns 'ok' or 'warn' based on value range bounds."""
+    bounds = RANGE_BOUNDS.get(ind_id)
+    if bounds is None or value_hint is None:
+        return "ok"
+    try:
+        val = float(value_hint)
+        lo, hi = bounds
+        return "warn" if (val < lo or val > hi) else "ok"
+    except (ValueError, TypeError):
+        return "ok"
+
+
+def _check_stale(last_updated_ts: float | None) -> bool:
+    if last_updated_ts is None:
+        return False
+    return (time.time() - last_updated_ts) > _STALE_THRESHOLD
 
 # ── 64-indicator catalog ───────────────────────────────────────────
 # type:
@@ -36,7 +70,7 @@ INDICATOR_CATALOG = [
     {"id": "yf_^TNX",      "name": "미국 10Y 금리",       "cat": "매크로",     "type": "registry",   "provider": "Yahoo Finance"},
     {"id": "yf_^IRX",      "name": "미국 2Y 금리",        "cat": "매크로",     "type": "registry",   "provider": "Yahoo Finance"},
     # ── 심리 (3) ─────────────────────────────────────────────────
-    {"id": "fg_index",     "name": "Fear & Greed Index",  "cat": "심리",       "type": "registry",   "provider": "Alternative.me"},
+    {"id": "fg_index",     "name": "Fear & Greed Index",  "cat": "심리",       "type": "registry",   "provider": "CNN"},
     {"id": "put_call",     "name": "Put/Call 비율",        "cat": "심리",       "type": "hardcoded",  "provider": "하드코딩"},
     {"id": "market_temp",  "name": "시장 온도 종합",       "cat": "심리",       "type": "calculated", "provider": "계산값", "deps": ["fg_index", "yf_^VIX"]},
     # ── 수급 (3) ─────────────────────────────────────────────────
@@ -106,10 +140,15 @@ def _resolve_indicator(ind: dict) -> dict:
             "status_type": "hardcoded",
             "last_updated": None,
             "value_hint":  None,
+            "range_check": "ok",
+            "is_stale":    False,
         }
 
     if itype == "registry":
         s = dr.get_status(ind_id)
+        raw_entry = dr.get_all().get(ind_id, {})
+        rc  = _check_range(ind_id, s.get("value_hint"))
+        stale = _check_stale(raw_entry.get("last_updated_ts"))
         return {
             "id":          ind_id,
             "name":        ind["name"],
@@ -119,12 +158,13 @@ def _resolve_indicator(ind: dict) -> dict:
             "status_type": s["status"],
             "last_updated": s["last_updated"],
             "value_hint":  s.get("value_hint"),
+            "range_check": rc,
+            "is_stale":    stale,
         }
 
     # calculated — check deps
     deps = ind.get("deps", [])
     if not deps:
-        # no deps to check, mark as "정상" if any stock data is available
         deps = ["hist_^GSPC"]
 
     any_real = dr.any_collected(*deps)
@@ -137,7 +177,6 @@ def _resolve_indicator(ind: dict) -> dict:
     else:
         st = "폴백"
 
-    # use the earliest dep timestamp as last_updated
     last_updated = None
     for dep in deps:
         s = dr.get_status(dep)
@@ -154,6 +193,8 @@ def _resolve_indicator(ind: dict) -> dict:
         "status_type": st,
         "last_updated": last_updated,
         "value_hint":  None,
+        "range_check": "ok",
+        "is_stale":    False,
     }
 
 
@@ -168,6 +209,8 @@ async def get_data_status():
     real      = sum(1 for r in resolved if r["status"] == "정상" and r["status_type"] != "hardcoded")
     fallback  = sum(1 for r in resolved if r["status"] == "폴백")
     uncoll    = sum(1 for r in resolved if r["status"] == "미수집")
+    warnings  = sum(1 for r in resolved if r.get("range_check") == "warn")
+    stale_ct  = sum(1 for r in resolved if r.get("is_stale"))
 
     real_ratio = round((real + hardcoded) / total * 100, 1)
 
@@ -180,13 +223,15 @@ async def get_data_status():
 
     return {
         "summary": {
-            "total":       total,
-            "real":        real,
-            "fallback":    fallback,
-            "uncollected": uncoll,
-            "hardcoded":   hardcoded,
-            "real_ratio":  real_ratio,
-            "checked_at":  datetime.now(timezone.utc).isoformat(),
+            "total":               total,
+            "real":                real,
+            "fallback":            fallback,
+            "uncollected":         uncoll,
+            "hardcoded":           hardcoded,
+            "real_ratio":          real_ratio,
+            "validation_warnings": warnings,
+            "stale_count":         stale_ct,
+            "checked_at":          datetime.now(timezone.utc).isoformat(),
         },
         "categories": categories,
     }

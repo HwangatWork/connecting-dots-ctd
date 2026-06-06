@@ -323,6 +323,8 @@ function renderStatus(data) {
       <div class="s-pill"><div class="s-dot" style="background:var(--ac)"></div>상시 ${summary.hardcoded}개</div>
       <div class="s-pill"><div class="s-dot" style="background:var(--ye)"></div>폴백 ${summary.fallback}개</div>
       <div class="s-pill"><div class="s-dot" style="background:var(--t3)"></div>미수집 ${summary.uncollected}개</div>
+      ${summary.validation_warnings > 0 ? `<div class="s-pill"><div class="s-dot" style="background:var(--re)"></div>범위경고 ${summary.validation_warnings}개</div>` : ''}
+      ${summary.stale_count > 0 ? `<div class="s-pill"><div class="s-dot" style="background:var(--or)"></div>갱신지연 ${summary.stale_count}개</div>` : ''}
     </div>
     <div class="checked-at">확인 시각: ${new Date(summary.checked_at).toLocaleString('ko-KR', {timeZone:'Asia/Seoul', hour12:false})}</div>
   `;
@@ -347,6 +349,7 @@ function renderStatus(data) {
               <div class="ind-name">${ind.name}</div>
               <div class="ind-provider">${ind.provider}</div>
             </div>
+            <span style="font-size:13px;margin-right:4px" title="${ind.range_check==='warn'?'범위 초과':ind.is_stale?'갱신 지연':'정상'}">${ind.range_check==='warn'?'🔴':ind.is_stale?'⚠️':'✅'}</span>
             <span class="badge ${badgeClass(ind.status_type === 'hardcoded' ? 'hardcoded' : ind.status)}">${badgeLabel(ind)}</span>
             <div class="ind-time">${formatTime(ind.last_updated)}</div>
           </div>
