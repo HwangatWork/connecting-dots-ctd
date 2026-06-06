@@ -56,7 +56,7 @@ hook: .claude/hooks/roadmap_runner.sh (Stop hook, exit 2)
 
 - [x] FRED 복구 방식 결정 — 옵션 A (공식 API 키, api.stlouisfed.org)
 - [x] yfinance 잔재 호출 경로 완전 제거 (Render 로그 429 박멸)
-- [ ] 하드코딩 지표 확인 (M2/역RP/FED자산/HY스프레드) → 실데이터 or "점검 중"
+- [x] 하드코딩 지표 확인 (M2/역RP/FED자산/HY스프레드) → "점검 중" 처리 (FRED API 키 발급 후 실데이터 전환)
 - [?] FRED 4개 복구 (US10Y/DXY/T10Y2Y/연준자산) — API 키 발급 후 진행 (fred.stlouisfed.org/docs/api/api_key.html)
 
 ## P1 — UX/UI
